@@ -1,3 +1,4 @@
+import { env } from "./env";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import type { Server } from "node:http";
@@ -38,7 +39,7 @@ app.route("", webhooksRouter);
 app.route("", webhookLogsRouter);
 app.route("", sseRouter);
 
-const port = parseInt(process.env.PORT || "9900");
+const port = env.PORT;
 
 const server = serve({ fetch: app.fetch, port }, (info) => {
   console.log(`[API] Listening on http://localhost:${info.port}`);
