@@ -3,9 +3,26 @@ name: Test
 on: [push, pull_request]
 
 jobs:
+  types-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install
+      - name: Typecheck
+        run: pnpm --filter @agentfleet/types typecheck
+      - name: Run tests
+        run: pnpm --filter @agentfleet/types test
+
   api-tests:
     runs-on: ubuntu-latest
-
+    needs: types-tests
     services:
       postgres:
         image: postgres:16-alpine
@@ -20,37 +37,37 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
-
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Install hub dependencies
-        run: cd hub && npm install
-
-      - name: Run API test suite (50 tests)
+          cache: 'pnpm'
+      - run: pnpm install
+      - name: Typecheck
+        run: pnpm --filter @agentfleet/api typecheck
+      - name: Run tests
         env:
           DATABASE_URL: postgresql://postgres:testpass@localhost:5432/agentfleet_test
-        run: cd hub && node test.js
+        run: pnpm --filter @agentfleet/api test
 
-  cli-tests:
+  web-tests:
     runs-on: ubuntu-latest
-
+    needs: types-tests
     steps:
       - uses: actions/checkout@v4
-
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Install CLI dependencies
-        run: cd cli && npm install
-
-      - name: CLI help command
-        run: node cli/index.js help
-
-      - name: CLI agents command (no config)
-        run: node cli/index.js agents 2>&1 || true
+          cache: 'pnpm'
+      - run: pnpm install
+      - name: Run tests
+        run: pnpm --filter web test
+      - name: Build
+        run: pnpm --filter web build
