@@ -27,7 +27,9 @@ try {
   }
 } catch (_) {}
 
-const HUB_URL = process.env.AGENTFLEET_HUB || manifest.hub || configData.hub || 'ws://localhost:9900';
+const HUB_BASE = process.env.AGENTFLEET_HUB || manifest.hub || configData.hub || 'ws://localhost:9900';
+// Ensure WS connects to the /ws endpoint
+const HUB_URL = HUB_BASE.replace(/\/$/, '') + '/ws';
 const TOKEN = process.env.AGENTFLEET_TOKEN || manifest.token || configData.token || '';
 const MACHINE_NAME = manifest.machine_name || configData.machine_name || os.hostname();
 const agents = manifest.agents || [];
@@ -62,15 +64,16 @@ function connect() {
   if (shuttingDown) return;
 
   log(`Connecting to hub at ${HUB_URL}...`);
-  ws = new WebSocket(HUB_URL);
+  ws = new WebSocket(HUB_URL, {
+    headers: { Authorization: `Bearer ${TOKEN}` },
+  });
 
   ws.on('open', () => {
     log('Connected to hub');
 
-    // Register agents
+    // Register agents (token is now in the WS upgrade header)
     const registration = {
       type: 'register',
-      token: TOKEN,
       machine: MACHINE_NAME,
       agents: agents.map((a) => ({
         name: a.name,
