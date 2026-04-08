@@ -123,10 +123,10 @@ export function DispatchForm() {
           </TabsList>
 
           <TabsContent value="manual">
-            <form onSubmit={handleManualSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ticketRef">Ticket Reference</Label>
+            <form onSubmit={handleManualSubmit}>
+              <div className="grid gap-3 items-end" style={{ gridTemplateColumns: "140px 1fr 1fr 140px auto" }}>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="ticketRef" className="text-xs text-muted-foreground">Ticket ID</Label>
                   <Input
                     id="ticketRef"
                     placeholder="KIP-301"
@@ -135,8 +135,28 @@ export function DispatchForm() {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Priority</Label>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="title" className="text-xs text-muted-foreground">Title</Label>
+                  <Input
+                    id="title"
+                    placeholder="Describe the ticket"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="labels" className="text-xs text-muted-foreground">Labels (comma-sep)</Label>
+                  <Input
+                    id="labels"
+                    placeholder="backend, feature"
+                    value={labels}
+                    onChange={(e) => setLabels(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="priority" className="text-xs text-muted-foreground">Priority</Label>
                   <Select value={priority} onValueChange={(v) => setPriority(v ?? "medium")}>
                     <SelectTrigger id="priority">
                       <SelectValue />
@@ -149,40 +169,22 @@ export function DispatchForm() {
                     </SelectContent>
                   </Select>
                 </div>
+                <Button type="submit" disabled={submitting} className="whitespace-nowrap">
+                  {submitting ? "Dispatching..." : "Dispatch"}
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  placeholder="Implement user authentication"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
+              <div className="mt-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="description" className="text-xs text-muted-foreground">Description (optional)</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Additional context for the agent..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={2}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="labels">Labels (comma-separated)</Label>
-                <Input
-                  id="labels"
-                  placeholder="frontend, react, auth"
-                  value={labels}
-                  onChange={(e) => setLabels(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (optional)</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Additional context for the agent..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <Button type="submit" disabled={submitting} className="w-full">
-                {submitting ? "Dispatching..." : "Dispatch"}
-              </Button>
             </form>
           </TabsContent>
 

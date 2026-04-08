@@ -86,37 +86,37 @@
 
 /* Dark mode — AgentFleet default */
 .dark {
-  --background: oklch(0.16 0.02 240);
-  --foreground: oklch(0.93 0.005 240);
-  --card: oklch(0.19 0.02 240);
-  --card-foreground: oklch(0.93 0.005 240);
-  --popover: oklch(0.19 0.02 240);
-  --popover-foreground: oklch(0.93 0.005 240);
-  --primary: oklch(0.65 0.16 165);
-  --primary-foreground: oklch(0.14 0.03 165);
-  --secondary: oklch(0.22 0.02 240);
-  --secondary-foreground: oklch(0.93 0.005 240);
-  --muted: oklch(0.22 0.02 240);
-  --muted-foreground: oklch(0.65 0.01 240);
-  --accent: oklch(0.65 0.16 165);
-  --accent-foreground: oklch(0.14 0.03 165);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.28 0.015 240);
-  --input: oklch(0.28 0.015 240);
-  --ring: oklch(0.65 0.16 165);
-  --chart-1: oklch(0.65 0.16 165);
-  --chart-2: oklch(0.6 0.12 200);
-  --chart-3: oklch(0.55 0.1 250);
-  --chart-4: oklch(0.7 0.08 140);
-  --chart-5: oklch(0.5 0.15 280);
-  --sidebar: oklch(0.14 0.02 240);
-  --sidebar-foreground: oklch(0.93 0.005 240);
-  --sidebar-primary: oklch(0.65 0.16 165);
-  --sidebar-primary-foreground: oklch(0.14 0.03 165);
-  --sidebar-accent: oklch(0.22 0.02 240);
-  --sidebar-accent-foreground: oklch(0.93 0.005 240);
-  --sidebar-border: oklch(0.28 0.015 240);
-  --sidebar-ring: oklch(0.65 0.16 165);
+  --background: #222228;
+  --foreground: #E8E8F0;
+  --card: #2C2C33;
+  --card-foreground: #E8E8F0;
+  --popover: #2C2C33;
+  --popover-foreground: #E8E8F0;
+  --primary: #2DD4BF;
+  --primary-foreground: #1a1a20;
+  --secondary: #38384A;
+  --secondary-foreground: #E8E8F0;
+  --muted: #333340;
+  --muted-foreground: #9090A0;
+  --accent: #2DD4BF;
+  --accent-foreground: #1a1a20;
+  --destructive: #F87171;
+  --border: #38383F;
+  --input: #38383F;
+  --ring: #2DD4BF;
+  --chart-1: #2DD4BF;
+  --chart-2: #A78BFA;
+  --chart-3: #FBBF24;
+  --chart-4: #34D399;
+  --chart-5: #F87171;
+  --sidebar: #2C2C33;
+  --sidebar-foreground: #E8E8F0;
+  --sidebar-primary: #2DD4BF;
+  --sidebar-primary-foreground: #1a1a20;
+  --sidebar-accent: rgba(45, 212, 191, 0.12);
+  --sidebar-accent-foreground: #2DD4BF;
+  --sidebar-border: #38383F;
+  --sidebar-ring: #2DD4BF;
 }
 
 @layer base {

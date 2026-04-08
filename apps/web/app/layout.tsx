@@ -17,12 +17,13 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className="h-full antialiased"
+      className="dark h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {children}

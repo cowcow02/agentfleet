@@ -11,10 +11,11 @@ import {
   LogOut,
   Sun,
   Moon,
+  Play,
 } from "lucide-react";
 import { signOut, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+/* Separator removed — using border-t on footer instead */
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
@@ -47,21 +48,17 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
+    <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <span className="text-sm font-bold text-primary-foreground">AF</span>
-        </div>
-        <span className="text-lg font-semibold text-sidebar-foreground">
+      <div className="flex items-center gap-2.5 px-5 pt-6 pb-5">
+        <Play className="h-5 w-5 text-primary shrink-0" />
+        <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
           AgentFleet
         </span>
       </div>
 
-      <Separator />
-
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-3">
+      <nav className="flex-1 space-y-0.5 px-2.5 py-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -69,44 +66,42 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-primary"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-sidebar-foreground",
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className={cn("h-4 w-4", isActive ? "opacity-100" : "opacity-70")} />
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      <Separator />
-
       {/* User info + controls */}
-      <div className="p-3 space-y-2">
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+      <div className="border-t border-sidebar-border p-4 space-y-3">
+        <div className="flex items-center gap-2.5">
+          <Avatar className="h-8 w-8 rounded-lg">
+            <AvatarFallback className="rounded-lg text-xs font-semibold bg-primary/10 text-primary">
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 truncate">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium text-sidebar-foreground truncate">
               {user?.name ?? "Loading..."}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-[11px] text-muted-foreground truncate">
               {user?.email ?? ""}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 px-2">
+        <div className="flex items-center gap-1">
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-8 w-8 text-muted-foreground"
+            className="h-8 w-8 flex-1 text-muted-foreground border-border hover:text-foreground hover:border-muted-foreground"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             title="Toggle theme"
           >
@@ -117,9 +112,9 @@ export function Sidebar() {
             )}
           </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-8 w-8 text-muted-foreground"
+            className="h-8 w-8 flex-1 text-muted-foreground border-border hover:text-destructive hover:border-destructive/30"
             onClick={handleSignOut}
             title="Sign out"
           >
