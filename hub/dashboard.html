@@ -6,31 +6,50 @@
 <title>Dashboard — AgentFleet</title>
 <style>
   :root {
-    --bg: #0f1117;
-    --surface: #161922;
-    --surface-hover: #1c1f2e;
-    --surface-elevated: #1e2235;
-    --border: #262b3d;
-    --border-subtle: #1f2335;
-
-    --text: #e1e4ed;
-    --text-secondary: #8b90a0;
-    --text-tertiary: #5c6070;
-
-    --accent: #7c6cf0;
-    --accent-hover: #8d7ff5;
-    --accent-subtle: rgba(124, 108, 240, 0.12);
-
-    --success: #3ecf8e;
-    --success-subtle: rgba(62, 207, 142, 0.12);
-    --warning: #f0b429;
-    --warning-subtle: rgba(240, 180, 41, 0.12);
-    --danger: #e5484d;
-    --danger-subtle: rgba(229, 72, 77, 0.12);
-    --info: #5b9bf0;
-    --info-subtle: rgba(91, 155, 240, 0.12);
-
+    --bg: #FDFBF9;
+    --surface: #F5F1EC;
+    --surface-hover: #EDE8E0;
+    --surface-elevated: #E8E2DA;
+    --border: #E8E2DA;
+    --border-subtle: #F0EBE4;
+    --text: #1A1A1A;
+    --text-secondary: #6B6560;
+    --text-tertiary: #8A8580;
+    --accent: #14B8A6;
+    --accent-hover: #0D9488;
+    --accent-subtle: rgba(20, 184, 166, 0.10);
+    --success: #059669;
+    --success-subtle: rgba(5, 150, 105, 0.10);
+    --warning: #D97706;
+    --warning-subtle: rgba(217, 119, 6, 0.10);
+    --danger: #C53030;
+    --danger-subtle: rgba(197, 48, 48, 0.10);
+    --info: #8168E0;
+    --info-subtle: rgba(129, 104, 224, 0.10);
     --sidebar-width: 220px;
+  }
+
+  [data-theme="dark"] {
+    --bg: #222228;
+    --surface: #2C2C33;
+    --surface-hover: #333340;
+    --surface-elevated: #38384A;
+    --border: #38383F;
+    --border-subtle: #2F2F38;
+    --text: #E8E8F0;
+    --text-secondary: #9090A0;
+    --text-tertiary: #707078;
+    --accent: #2DD4BF;
+    --accent-hover: #5EEAD4;
+    --accent-subtle: rgba(45, 212, 191, 0.12);
+    --success: #34D399;
+    --success-subtle: rgba(52, 211, 153, 0.12);
+    --warning: #FBBF24;
+    --warning-subtle: rgba(251, 191, 36, 0.10);
+    --danger: #F87171;
+    --danger-subtle: rgba(248, 113, 113, 0.12);
+    --info: #A78BFA;
+    --info-subtle: rgba(167, 139, 250, 0.12);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -113,7 +132,7 @@
 
   .stat-card {
     background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px;
-    padding: 20px 24px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    padding: 20px 24px; box-shadow: none;
   }
   .stat-label { font-size: 12px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
   .stat-value { font-size: 28px; font-weight: 700; font-feature-settings: 'tnum'; line-height: 1.1; }
@@ -125,7 +144,7 @@
   /* --- Dispatch Section --- */
   .dispatch-section {
     background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px;
-    padding: 24px; margin-bottom: 28px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    padding: 24px; margin-bottom: 28px; box-shadow: none;
   }
   .dispatch-section h2 { font-size: 15px; font-weight: 600; margin-bottom: 18px; }
 
@@ -159,7 +178,7 @@
     background: var(--accent); color: white; border: none; border-radius: 8px; padding: 10px 20px;
     font-family: inherit; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
   }
-  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124, 108, 240, 0.25); }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px var(--accent-subtle); }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
   /* Linear issues */
@@ -186,7 +205,7 @@
   /* Panels */
   .panel {
     background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px;
-    overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    overflow: hidden; box-shadow: none;
   }
   .panel-header {
     padding: 16px 20px; border-bottom: 1px solid var(--border-subtle);
@@ -213,9 +232,9 @@
   .tag.frontend, .tag.fe { background: var(--accent-subtle); color: var(--accent); }
   .tag.bug { background: var(--danger-subtle); color: var(--danger); }
   .tag.feature { background: var(--success-subtle); color: var(--success); }
-  .tag.question, .tag.explore, .tag.refactor { background: rgba(34,211,238,0.1); color: #5cc8db; }
+  .tag.question, .tag.explore, .tag.refactor { background: var(--accent-subtle); color: var(--accent); }
   .tag.simple { background: var(--warning-subtle); color: var(--warning); }
-  .tag-default { background: rgba(139,144,160,0.1); color: var(--text-secondary); }
+  .tag-default { background: var(--border-subtle); color: var(--text-secondary); }
   .capacity { font-size: 13px; color: var(--text-secondary); white-space: nowrap; font-feature-settings: 'tnum'; }
   .capacity .used { color: var(--warning); font-weight: 600; }
   .capacity .idle { color: var(--success); font-weight: 600; }
@@ -268,6 +287,15 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .theme-toggle {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; background: transparent; border: 1px solid var(--border);
+    color: var(--text-secondary); padding: 7px 0; border-radius: 6px;
+    cursor: pointer; transition: all 0.15s; margin-bottom: 8px;
+  }
+  .theme-toggle:hover { color: var(--text); border-color: var(--text-tertiary); }
+  .theme-toggle svg { width: 16px; height: 16px; }
 </style>
 </head>
 <body>
@@ -288,6 +316,10 @@
       <div class="sidebar-avatar" id="user-avatar"></div>
       <div class="sidebar-user-info"><div class="sidebar-user-name" id="user-name"></div><div class="sidebar-user-team" id="user-team"></div></div>
     </div>
+    <button onclick="toggleTheme()" class="theme-toggle" id="theme-toggle" title="Toggle theme">
+      <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    </button>
     <button onclick="logout()" class="sidebar-logout">Sign out</button>
   </div>
 </aside>
@@ -345,6 +377,36 @@
 </div>
 
 <script>
+(function initTheme() {
+  const saved = localStorage.getItem('agentfleet-theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = saved || (prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeIcon(theme);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if (!localStorage.getItem('agentfleet-theme')) {
+      const t = e.matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+      updateThemeIcon(t);
+    }
+  });
+})();
+function updateThemeIcon(theme) {
+  const sun = document.getElementById('theme-icon-sun');
+  const moon = document.getElementById('theme-icon-moon');
+  if (sun && moon) {
+    sun.style.display = theme === 'dark' ? 'block' : 'none';
+    moon.style.display = theme === 'dark' ? 'none' : 'block';
+  }
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('agentfleet-theme', next);
+  updateThemeIcon(next);
+}
+
 const TOKEN = localStorage.getItem('agentfleet_session') || localStorage.getItem('agentfleet_token');
 const HUB = window.location.origin;
 if (!TOKEN) { window.location.href = '/'; }
