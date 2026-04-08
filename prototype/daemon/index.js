@@ -218,7 +218,7 @@ function handleDispatch(msg) {
 
   const isHeadless = launcher === 'headless';
 
-  runningJobs.set(dispatch_id, { process: child, agentName, startedAt: Date.now() });
+  runningJobs.set(dispatch_id, { process: child, agentName, startedAt: Date.now(), state: 'active', idleSince: null });
 
   // Send started status
   sendStatus(dispatch_id, 'started');
@@ -380,16 +380,70 @@ function sendStatus(dispatchId, message) {
   }));
 }
 
-// --- Periodic status reporting for running jobs ---
-let statusReportTimer = null;
-statusReportTimer = setInterval(() => {
+// --- CPU monitoring for idle detection ---
+const { execSync } = require('child_process');
+
+function getProcessCpu(pid) {
+  try {
+    // Get CPU of process tree (parent + children)
+    const output = execSync(`ps -p ${pid} -o %cpu= 2>/dev/null || echo 0`, { encoding: 'utf-8', timeout: 3000 });
+    return parseFloat(output.trim()) || 0;
+  } catch {
+    return -1; // process doesn't exist
+  }
+}
+
+// Check CPU every 5 seconds, update job state
+const CPU_IDLE_THRESHOLD = 2;    // below 2% = idle
+const IDLE_CONFIRM_MS = 20000;   // 20 seconds of low CPU before reporting idle
+
+setInterval(() => {
+  for (const [dispatchId, job] of runningJobs) {
+    if (!job.process || !job.process.pid) continue;
+
+    const cpu = getProcessCpu(job.process.pid);
+    if (cpu < 0) continue; // process gone, will be cleaned up by close handler
+
+    const now = Date.now();
+    const wasActive = job.state === 'active';
+    const wasIdle = job.state === 'idle';
+
+    if (cpu < CPU_IDLE_THRESHOLD) {
+      // CPU is low
+      if (!job.idleSince) {
+        job.idleSince = now;
+      }
+      const idleDuration = now - job.idleSince;
+      if (idleDuration >= IDLE_CONFIRM_MS && wasActive) {
+        // Transition: active → idle
+        job.state = 'idle';
+        const elapsed = Math.round((now - job.startedAt) / 1000);
+        log(`[${job.agentName}] Idle — waiting for input (after ${formatDuration(elapsed)})`);
+        sendStatus(dispatchId, `Idle — waiting for input (after ${formatDuration(elapsed)})`);
+      }
+    } else {
+      // CPU is active
+      if (wasIdle) {
+        // Transition: idle → active
+        log(`[${job.agentName}] Active again`);
+        sendStatus(dispatchId, 'Active — processing');
+      }
+      job.state = 'active';
+      job.idleSince = null;
+    }
+  }
+}, 5000);
+
+// --- Periodic status reporting for running jobs (every 30s) ---
+setInterval(() => {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   for (const [dispatchId, job] of runningJobs) {
     const elapsed = Math.round((Date.now() - job.startedAt) / 1000);
+    const stateLabel = job.state === 'idle' ? 'Idle' : 'Running';
     ws.send(JSON.stringify({
       type: 'status',
       dispatch_id: dispatchId,
-      message: `Running (${formatDuration(elapsed)})`,
+      message: `${stateLabel} (${formatDuration(elapsed)})`,
       timestamp: new Date().toISOString(),
     }));
   }
