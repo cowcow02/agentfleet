@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "skills": {
+    "harness-engine": {
+      "source": "kipwise/harnessable",
+      "sourceType": "github",
+      "computedHash": "271d40bc7b87943debd672df710f95fa8c8cd1100ad1ed6d3309329e8868793e"
+    },
+    "harness-learn": {
+      "source": "kipwise/harnessable",
+      "sourceType": "github",
+      "computedHash": "73bb9ad59fbd9114cccc879d89d287abc049fe3c4f451480cd754b7403b5bfe2"
+    },
+    "harness-refs": {
+      "source": "kipwise/harnessable",
+      "sourceType": "github",
+      "computedHash": "c95dd951ca53932da539faeeaacaab663a02c86db92f39176d2987dff921889b"
+    },
+    "harness-retro": {
+      "source": "kipwise/harnessable",
+      "sourceType": "github",
+      "computedHash": "0284df27ad62f63627e1c19a1662b1ea9606ea4ce85067e69c5e53c8d48a50ab"
+    },
+    "harness-setup": {
+      "source": "kipwise/harnessable",
+      "sourceType": "github",
+      "computedHash": "eccf5027d433d1a32efc831596612fdc7f60728add6a7486214124b605f75085"
+    }
+  }
+}
