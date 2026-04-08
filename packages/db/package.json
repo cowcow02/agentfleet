@@ -1,0 +1,21 @@
+{
+  "name": "@agentfleet/db",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.39",
+    "pg": "^8.20"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30",
+    "@types/pg": "^8",
+    "typescript": "^5.7"
+  }
+}
