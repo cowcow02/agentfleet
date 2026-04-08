@@ -12,13 +12,13 @@ jobs:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - run: pnpm install
       - name: Typecheck
         run: pnpm --filter @agentfleet/types typecheck
-      - name: Run tests
-        run: pnpm --filter @agentfleet/types test
+      - name: Run tests with coverage
+        run: pnpm --filter @agentfleet/types test -- --coverage
 
   api-tests:
     runs-on: ubuntu-latest
@@ -44,15 +44,15 @@ jobs:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - run: pnpm install
       - name: Typecheck
         run: pnpm --filter @agentfleet/api typecheck
-      - name: Run tests
+      - name: Run tests with coverage
         env:
           DATABASE_URL: postgresql://postgres:testpass@localhost:5432/agentfleet_test
-        run: pnpm --filter @agentfleet/api test
+        run: pnpm --filter @agentfleet/api test -- --coverage
 
   web-tests:
     runs-on: ubuntu-latest
@@ -64,10 +64,10 @@ jobs:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
       - run: pnpm install
-      - name: Run tests
-        run: pnpm --filter web test
+      - name: Run tests with coverage
+        run: pnpm --filter web test -- --coverage
       - name: Build
         run: pnpm --filter web build

@@ -11,9 +11,15 @@ export default defineConfig({
     exclude: ["e2e-test/**", "node_modules/**"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "text-summary"],
+      reporter: ["text", "text-summary", "json-summary"],
       include: ["lib/**/*.ts", "components/**/*.tsx"],
       exclude: ["components/ui/**"],
+      thresholds: {
+        lines: 95,
+        functions: 95,
+        branches: 95,
+        statements: 95,
+      },
     },
   },
   resolve: {
