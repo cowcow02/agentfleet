@@ -93,6 +93,7 @@ const membersByEmail = new Map();   // email -> { member, team }
 const invites = new Map();          // inviteCode -> { teamId, email, role, createdAt, expiresAt }
 const machines = new Map();         // machineKey (`${teamId}:${machineName}`) -> Machine
 const dispatches = [];              // Array<Dispatch>
+const webhookLog = [];              // Array<{ timestamp, teamId, action, reason, ticket, dispatch_id }>
 let dispatchCounter = 0;
 
 // ---------------------------------------------------------------------------
@@ -398,39 +399,56 @@ const httpServer = http.createServer(async (req, res) => {
   if (linearWebhookMatch) {
     const teamId = linearWebhookMatch[1];
     const team = teams.get(teamId);
+
+    function logWebhook(teamId, action, reason, ticket, dispatchId) {
+      const entry = { timestamp: new Date().toISOString(), teamId, action, reason, ticket: ticket || null, dispatch_id: dispatchId || null };
+      webhookLog.unshift(entry);
+      if (webhookLog.length > 200) webhookLog.pop();
+      log(`[Webhook] team=${teamId} action=${action} reason=${reason || '-'} ticket=${ticket?.id || '-'}`);
+    }
+
     if (!team) {
+      logWebhook(teamId, 'rejected', 'team not found');
       return json(res, 404, { error: 'Team not found' });
     }
 
     let body;
-    try { body = await parseBody(req); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+    try { body = await parseBody(req); } catch {
+      logWebhook(teamId, 'rejected', 'invalid JSON');
+      return json(res, 400, { error: 'Invalid JSON' });
+    }
 
-    if (body.type !== 'Issue' || !body.data) {
+    const action = body.action || 'unknown';
+    const eventType = body.type || 'unknown';
+
+    if (eventType !== 'Issue' || !body.data) {
+      logWebhook(teamId, 'ignored', `not an issue event (type=${eventType}, action=${action})`);
       return json(res, 200, { ok: true, action: 'ignored', reason: 'not an issue event' });
     }
 
     const config = team.linearConfig;
     if (!config || !config.triggerStatus) {
+      logWebhook(teamId, 'ignored', 'no linear config', { id: body.data.identifier || body.data.id, title: body.data.title });
       return json(res, 200, { ok: true, action: 'ignored', reason: 'no linear config' });
     }
 
     const issue = body.data;
     const stateName = issue.state && issue.state.name;
     const issueLabels = (issue.labels || []).map((l) => l.name);
+    const ticketInfo = { id: issue.identifier || issue.id, title: issue.title || '', labels: issueLabels, status: stateName };
 
-    // Check if status matches
     if (stateName !== config.triggerStatus) {
+      logWebhook(teamId, 'ignored', `status "${stateName}" != trigger "${config.triggerStatus}"`, ticketInfo);
       return json(res, 200, { ok: true, action: 'ignored', reason: 'status mismatch' });
     }
 
-    // Check if any trigger labels match
     const triggerLabels = config.triggerLabels || [];
     const hasMatchingLabel = triggerLabels.length === 0 || triggerLabels.some((tl) => issueLabels.includes(tl));
     if (!hasMatchingLabel) {
+      logWebhook(teamId, 'ignored', `labels [${issueLabels.join(',')}] don't match trigger [${triggerLabels.join(',')}]`, ticketInfo);
       return json(res, 200, { ok: true, action: 'ignored', reason: 'label mismatch' });
     }
 
-    // Auto-dispatch
     const ticket = {
       id: issue.identifier || issue.id,
       title: issue.title || '',
@@ -441,9 +459,11 @@ const httpServer = http.createServer(async (req, res) => {
 
     const dispatch = createDispatch(teamId, 'Linear Webhook', ticket, 'linear');
     if (!dispatch) {
+      logWebhook(teamId, 'no_match', 'no matching agent available', ticketInfo);
       return json(res, 200, { ok: true, action: 'no_match', reason: 'no matching agent' });
     }
 
+    logWebhook(teamId, 'dispatched', `→ ${dispatch.machine}/${dispatch.agent}`, ticketInfo, dispatch.dispatch_id);
     return json(res, 200, { ok: true, action: 'dispatched', dispatch_id: dispatch.dispatch_id });
   }
 
@@ -729,6 +749,12 @@ const httpServer = http.createServer(async (req, res) => {
         avg_duration_seconds: avgDuration,
         total_agent_seconds: completed.reduce((s, d) => s + (d.duration_seconds || 0), 0),
       });
+    }
+
+    // GET /api/webhooks — webhook event log (team-scoped)
+    if (req.method === 'GET' && pathname === '/api/webhooks') {
+      const teamWebhooks = webhookLog.filter((w) => w.teamId === team.id);
+      return json(res, 200, { webhooks: teamWebhooks });
     }
 
     // POST /api/dispatch
