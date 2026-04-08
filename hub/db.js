@@ -90,8 +90,9 @@ const MIGRATIONS = [
 // ---------------------------------------------------------------------------
 async function init() {
   if (!DATABASE_URL) {
-    console.log('[DB] No DATABASE_URL — running in memory-only mode');
-    return false;
+    console.error('[DB] FATAL: DATABASE_URL is required. Set it as an environment variable.');
+    console.error('[DB] Example: DATABASE_URL=postgresql://user:pass@host:5432/dbname');
+    process.exit(1);
   }
 
   pool = new Pool({
@@ -106,9 +107,9 @@ async function init() {
     client.release();
     console.log('[DB] Connected to PostgreSQL');
   } catch (err) {
-    console.error('[DB] Connection failed:', err.message);
-    pool = null;
-    return false;
+    console.error('[DB] FATAL: Cannot connect to PostgreSQL:', err.message);
+    console.error('[DB] Check your DATABASE_URL and ensure the database is running.');
+    process.exit(1);
   }
 
   await runMigrations();

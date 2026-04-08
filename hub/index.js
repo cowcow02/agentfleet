@@ -166,10 +166,8 @@ async function seedData() {
   membersByEmail.set(admin.email, { member: admin, team });
 
   // Persist to DB
-  if (db.isReady()) {
-    await db.saveTeam(team);
-    await db.saveMember(admin);
-  }
+  await db.saveTeam(team);
+  await db.saveMember(admin);
 
   log(`Seed team "${team.name}" created (id: ${team.id})`);
   log(`Admin token: ${admin.token}`);
@@ -1200,7 +1198,7 @@ process.on('SIGTERM', shutdown);
 
   httpServer.listen(PORT, () => {
     log(`Hub listening on http://localhost:${PORT} (HTTP + WebSocket)`);
-    log(`Database: ${db.isReady() ? 'PostgreSQL (persistent)' : 'In-memory (ephemeral)'}`);
+    log(`Database: PostgreSQL (persistent)`);
     log(`Default admin token: afm_charlie_001`);
     log(`Default login: charlie@kipwise.com / admin123`);
   });
