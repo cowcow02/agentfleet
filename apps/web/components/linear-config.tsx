@@ -44,7 +44,7 @@ export function LinearConfig() {
         .filter(Boolean);
 
       const result = await updateLinearConfig({
-        apiKey: apiKeyVal || undefined,
+        apiKey: apiKeyVal,
         triggerStatus,
         triggerLabels: labels,
       });

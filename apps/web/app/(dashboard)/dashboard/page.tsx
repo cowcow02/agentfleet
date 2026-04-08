@@ -151,7 +151,7 @@ export default function DashboardPage() {
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 600 }}>{agent.name}</div>
                         <div style={{ fontSize: 12, color: "var(--af-text-secondary)", marginTop: 2 }}>
-                          {agent.memberName || agent.machine}
+                          {agent.machine}
                         </div>
                         <div className="flex gap-1.5 flex-wrap" style={{ marginTop: 5 }}>
                           {agent.tags.map((tag) => (

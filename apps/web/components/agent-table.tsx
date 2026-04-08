@@ -20,7 +20,10 @@ function tagClass(tag: string): string {
 }
 
 function getStatus(agent: Agent): "online" | "busy" | "offline" {
-  if (!agent.online) return "offline";
+  // Use lastHeartbeat to determine online status (within last 30s = online)
+  const lastSeen = new Date(agent.lastHeartbeat).getTime();
+  const isOnline = Date.now() - lastSeen < 30000;
+  if (!isOnline) return "offline";
   if (agent.running > 0) return "busy";
   return "online";
 }
@@ -61,7 +64,7 @@ export function AgentTable({ agents }: AgentTableProps) {
       >
         <div />
         <div>Agent</div>
-        <div>Member</div>
+        <div>Status</div>
         <div>Tags</div>
         <div style={{ textAlign: "center" }}>Capacity</div>
       </div>
@@ -101,14 +104,13 @@ export function AgentTable({ agents }: AgentTableProps) {
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{agent.name}</div>
                 <div style={{ fontSize: 12, color: "var(--af-text-secondary)", marginTop: 2 }}>
-                  {agent.description || ""}
+                  {agent.machine}
                 </div>
               </div>
 
-              {/* Member */}
+              {/* Status */}
               <div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>{agent.memberName || "\u2014"}</div>
-                <div style={{ fontSize: 12, color: "var(--af-text-tertiary)", marginTop: 2 }}>
+                <div style={{ fontSize: 13 }}>
                   <span
                     style={{
                       fontWeight: 500,
@@ -122,6 +124,9 @@ export function AgentTable({ agents }: AgentTableProps) {
                   >
                     {statusLabel}
                   </span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--af-text-tertiary)", marginTop: 2 }}>
+                  {new Date(agent.lastHeartbeat).toLocaleTimeString()}
                 </div>
               </div>
 
