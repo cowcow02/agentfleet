@@ -53,8 +53,11 @@ export default function SettingsPage() {
   async function loadMembers() {
     try {
       const result = await organization.listMembers();
-      if (result.data) {
-        setMembers(result.data as unknown as Member[]);
+      const data = result.data;
+      if (Array.isArray(data)) {
+        setMembers(data as unknown as Member[]);
+      } else if (data && typeof data === "object" && "members" in data) {
+        setMembers((data as { members: Member[] }).members);
       }
     } catch {
       // Ignore — may not be org admin
