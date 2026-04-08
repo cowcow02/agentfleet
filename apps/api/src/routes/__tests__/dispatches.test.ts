@@ -133,6 +133,30 @@ describe("dispatches routes", () => {
       const body = await res.json();
       expect(body.error).toBe("No active organization");
     });
+
+    it("returns 400 for invalid query parameters", async () => {
+      const app = createTestApp("org-test");
+      app.route("/", dispatchesRouter);
+
+      const res = await app.request("/api/dispatches?limit=notanumber");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBeDefined();
+    });
+
+    it("filters by status, source, and agent", async () => {
+      const rows = [makeFakeRow({ status: "completed", source: "linear", agentName: "agent-b" })];
+      pushSelectResults(rows, [{ total: 1 }]);
+
+      const app = createTestApp("org-test");
+      app.route("/", dispatchesRouter);
+
+      const res = await app.request("/api/dispatches?status=completed&source=linear&agent=agent-b");
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.dispatches).toHaveLength(1);
+    });
   });
 
   describe("POST /api/dispatches", () => {
@@ -179,6 +203,18 @@ describe("dispatches routes", () => {
       expect(body.code).toBe("NO_AGENT");
     });
 
+    it("returns 400 when no organizationId on POST", async () => {
+      const app = createUnauthenticatedApp();
+      app.route("/", dispatchesRouter);
+
+      const res = await app.request("/api/dispatches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketRef: "T-1", title: "Bug", labels: ["ts"] }),
+      });
+      expect(res.status).toBe(400);
+    });
+
     it("returns 201 on successful dispatch", async () => {
       vi.mocked(createDispatch).mockResolvedValue({
         id: "d-new",
@@ -210,6 +246,14 @@ describe("dispatches routes", () => {
 
       const res = await app.request("/api/dispatches/d-nonexistent");
       expect(res.status).toBe(404);
+    });
+
+    it("returns 400 when no organizationId on GET :id", async () => {
+      const app = createUnauthenticatedApp();
+      app.route("/", dispatchesRouter);
+
+      const res = await app.request("/api/dispatches/d-1");
+      expect(res.status).toBe(400);
     });
 
     it("returns dispatch when found", async () => {

@@ -65,16 +65,16 @@ describe("POST /api/webhooks/linear/:orgId", () => {
     });
     expect(res.status).toBe(200);
     // Should have logged the webhook
-    expect(mockDbInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "rejected" })
-    );
+    expect(mockDbInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "rejected" }));
   });
 
   it("ignores non-Issue events", async () => {
-    mockDbSelect.mockResolvedValue([{
-      id: "int-1",
-      config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: [] },
-    }]);
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: [] },
+      },
+    ]);
     mockDbInsert.mockResolvedValue(undefined);
 
     const res = await webhooksRouter.request("/api/webhooks/linear/org-1", {
@@ -83,16 +83,16 @@ describe("POST /api/webhooks/linear/:orgId", () => {
       body: JSON.stringify({ type: "Comment", data: {} }),
     });
     expect(res.status).toBe(200);
-    expect(mockDbInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "ignored" })
-    );
+    expect(mockDbInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "ignored" }));
   });
 
   it("ignores when status does not match trigger", async () => {
-    mockDbSelect.mockResolvedValue([{
-      id: "int-1",
-      config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: [] },
-    }]);
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: [] },
+      },
+    ]);
     mockDbInsert.mockResolvedValue(undefined);
 
     const res = await webhooksRouter.request("/api/webhooks/linear/org-1", {
@@ -104,16 +104,16 @@ describe("POST /api/webhooks/linear/:orgId", () => {
       }),
     });
     expect(res.status).toBe(200);
-    expect(mockDbInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "ignored" })
-    );
+    expect(mockDbInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "ignored" }));
   });
 
   it("ignores when labels don't match trigger labels", async () => {
-    mockDbSelect.mockResolvedValue([{
-      id: "int-1",
-      config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: ["critical"] },
-    }]);
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: ["critical"] },
+      },
+    ]);
     mockDbInsert.mockResolvedValue(undefined);
 
     const res = await webhooksRouter.request("/api/webhooks/linear/org-1", {
@@ -129,16 +129,16 @@ describe("POST /api/webhooks/linear/:orgId", () => {
       }),
     });
     expect(res.status).toBe(200);
-    expect(mockDbInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "ignored" })
-    );
+    expect(mockDbInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "ignored" }));
   });
 
   it("dispatches valid matching issue event", async () => {
-    mockDbSelect.mockResolvedValue([{
-      id: "int-1",
-      config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: ["bug"] },
-    }]);
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: ["bug"] },
+      },
+    ]);
     mockDbInsert.mockResolvedValue(undefined);
 
     vi.mocked(createDispatch).mockResolvedValue({
@@ -172,18 +172,18 @@ describe("POST /api/webhooks/linear/:orgId", () => {
         labels: ["bug"],
         priority: "high", // priority 2 maps to high
       }),
-      "linear"
+      "linear",
     );
-    expect(mockDbInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "dispatched" })
-    );
+    expect(mockDbInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "dispatched" }));
   });
 
   it("logs no_match when createDispatch returns error", async () => {
-    mockDbSelect.mockResolvedValue([{
-      id: "int-1",
-      config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: [] },
-    }]);
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: [] },
+      },
+    ]);
     mockDbInsert.mockResolvedValue(undefined);
 
     vi.mocked(createDispatch).mockResolvedValue({
@@ -204,16 +204,16 @@ describe("POST /api/webhooks/linear/:orgId", () => {
       }),
     });
     expect(res.status).toBe(200);
-    expect(mockDbInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "no_match" })
-    );
+    expect(mockDbInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "no_match" }));
   });
 
   it("dispatches with 'linear' as label when issue has no labels", async () => {
-    mockDbSelect.mockResolvedValue([{
-      id: "int-1",
-      config: { apiKey: "key", triggerStatus: "", triggerLabels: [] },
-    }]);
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "", triggerLabels: [] },
+      },
+    ]);
     mockDbInsert.mockResolvedValue(undefined);
 
     vi.mocked(createDispatch).mockResolvedValue({
@@ -239,7 +239,7 @@ describe("POST /api/webhooks/linear/:orgId", () => {
     expect(createDispatch).toHaveBeenCalledWith(
       "org-1",
       expect.objectContaining({ labels: ["linear"] }),
-      "linear"
+      "linear",
     );
   });
 
@@ -252,10 +252,12 @@ describe("POST /api/webhooks/linear/:orgId", () => {
     { priority: undefined, expected: "medium" },
     { priority: 99, expected: "medium" },
   ])("maps Linear priority $priority to $expected", async ({ priority, expected }) => {
-    mockDbSelect.mockResolvedValue([{
-      id: "int-1",
-      config: { apiKey: "key", triggerStatus: "", triggerLabels: [] },
-    }]);
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "", triggerLabels: [] },
+      },
+    ]);
     mockDbInsert.mockResolvedValue(undefined);
 
     vi.mocked(createDispatch).mockResolvedValue({
@@ -283,8 +285,179 @@ describe("POST /api/webhooks/linear/:orgId", () => {
     expect(createDispatch).toHaveBeenCalledWith(
       "org-1",
       expect.objectContaining({ priority: expected }),
-      "linear"
+      "linear",
     );
+  });
+
+  it("falls back to body.data.status when state.name is missing", async () => {
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "In Progress", triggerLabels: [] },
+      },
+    ]);
+    mockDbInsert.mockResolvedValue(undefined);
+
+    vi.mocked(createDispatch).mockResolvedValue({
+      id: "d-new",
+      agentName: "agent-a",
+      machineName: "m1",
+      status: "dispatched",
+    });
+
+    const res = await webhooksRouter.request("/api/webhooks/linear/org-1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "Issue",
+        data: {
+          status: "In Progress",
+          identifier: "LIN-5",
+          title: "Test",
+          labels: [{ name: "ts" }],
+        },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(createDispatch).toHaveBeenCalled();
+  });
+
+  it("falls back to body.data.id when identifier is missing", async () => {
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "", triggerLabels: [] },
+      },
+    ]);
+    mockDbInsert.mockResolvedValue(undefined);
+
+    vi.mocked(createDispatch).mockResolvedValue({
+      id: "d-new",
+      agentName: "agent-a",
+      machineName: "m1",
+      status: "dispatched",
+    });
+
+    const res = await webhooksRouter.request("/api/webhooks/linear/org-1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "Issue",
+        data: {
+          id: "fallback-id",
+          title: "Test",
+          state: { name: "" },
+          labels: [{ name: "ts" }],
+        },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(createDispatch).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({ ticketRef: "fallback-id" }),
+      "linear",
+    );
+  });
+
+  it("uses UNKNOWN ticketRef and 'Linear Issue' title when data is missing", async () => {
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "", triggerLabels: [] },
+      },
+    ]);
+    mockDbInsert.mockResolvedValue(undefined);
+
+    vi.mocked(createDispatch).mockResolvedValue({
+      id: "d-new",
+      agentName: "agent-a",
+      machineName: "m1",
+      status: "dispatched",
+    });
+
+    const res = await webhooksRouter.request("/api/webhooks/linear/org-1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "Issue",
+        data: {
+          state: { name: "" },
+          labels: [{ name: "ts" }],
+        },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(createDispatch).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({ ticketRef: "UNKNOWN", title: "Linear Issue" }),
+      "linear",
+    );
+  });
+
+  it("handles labels with raw strings instead of objects", async () => {
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "", triggerLabels: ["raw-label"] },
+      },
+    ]);
+    mockDbInsert.mockResolvedValue(undefined);
+
+    vi.mocked(createDispatch).mockResolvedValue({
+      id: "d-new",
+      agentName: "agent-a",
+      machineName: "m1",
+      status: "dispatched",
+    });
+
+    const res = await webhooksRouter.request("/api/webhooks/linear/org-1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "Issue",
+        data: {
+          identifier: "LIN-10",
+          title: "Test",
+          state: { name: "" },
+          labels: [{ name: "raw-label" }],
+        },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(createDispatch).toHaveBeenCalled();
+  });
+
+  it("passes through when triggerStatus is empty string", async () => {
+    mockDbSelect.mockResolvedValue([
+      {
+        id: "int-1",
+        config: { apiKey: "key", triggerStatus: "", triggerLabels: [] },
+      },
+    ]);
+    mockDbInsert.mockResolvedValue(undefined);
+
+    vi.mocked(createDispatch).mockResolvedValue({
+      id: "d-new",
+      agentName: "agent-a",
+      machineName: "m1",
+      status: "dispatched",
+    });
+
+    const res = await webhooksRouter.request("/api/webhooks/linear/org-1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "Issue",
+        data: {
+          identifier: "LIN-1",
+          title: "Test",
+          state: { name: "Any Status" },
+          labels: [{ name: "ts" }],
+        },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(createDispatch).toHaveBeenCalled();
   });
 
   it("handles webhook log insert failure gracefully", async () => {

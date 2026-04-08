@@ -19,16 +19,17 @@ vi.mock("next-themes", () => ({
 
 // Mock auth-client
 const mockSignOut = vi.fn().mockResolvedValue(undefined);
+const mockUseSession = vi.fn(() => ({
+  data: {
+    user: {
+      name: "John Doe",
+      email: "john@example.com",
+    },
+  },
+}));
 vi.mock("@/lib/auth-client", () => ({
   signOut: (...args: unknown[]) => mockSignOut(...args),
-  useSession: () => ({
-    data: {
-      user: {
-        name: "John Doe",
-        email: "john@example.com",
-      },
-    },
-  }),
+  useSession: () => mockUseSession(),
 }));
 
 // Mock next/link
@@ -65,6 +66,14 @@ beforeEach(() => {
   mockSetTheme.mockReset();
   mockSignOut.mockReset().mockResolvedValue(undefined);
   mockUsePathname.mockReturnValue("/dashboard");
+  mockUseSession.mockReturnValue({
+    data: {
+      user: {
+        name: "John Doe",
+        email: "john@example.com",
+      },
+    },
+  });
 });
 
 describe("Sidebar", () => {
@@ -131,5 +140,76 @@ describe("Sidebar", () => {
     expect(screen.getByText("Agents").closest("a")).toHaveAttribute("href", "/agents");
     expect(screen.getByText("Dispatches").closest("a")).toHaveAttribute("href", "/dispatches");
     expect(screen.getByText("Settings").closest("a")).toHaveAttribute("href", "/settings");
+  });
+
+  it("hover on inactive nav link changes style", async () => {
+    const user = userEvent.setup();
+    mockUsePathname.mockReturnValue("/dashboard");
+    render(<Sidebar />);
+
+    const agentsLink = screen.getByText("Agents").closest("a")!;
+    await user.hover(agentsLink);
+    expect(agentsLink.style.background).toBe("var(--af-surface-hover)");
+    expect(agentsLink.style.color).toBe("var(--af-text)");
+
+    await user.unhover(agentsLink);
+    expect(agentsLink.style.background).toBe("transparent");
+    expect(agentsLink.style.color).toBe("var(--af-text-secondary)");
+  });
+
+  it("hover on active nav link does not change style", async () => {
+    const user = userEvent.setup();
+    mockUsePathname.mockReturnValue("/agents");
+    render(<Sidebar />);
+
+    const agentsLink = screen.getByText("Agents").closest("a")!;
+    const originalBg = agentsLink.style.background;
+    const originalColor = agentsLink.style.color;
+    await user.hover(agentsLink);
+    // Active link should keep its styles
+    expect(agentsLink.style.background).toBe(originalBg);
+    expect(agentsLink.style.color).toBe(originalColor);
+  });
+
+  it("hover on theme toggle button changes style", async () => {
+    const user = userEvent.setup();
+    render(<Sidebar />);
+
+    const themeBtn = screen.getByTitle("Toggle theme");
+    await user.hover(themeBtn);
+    expect(themeBtn.style.color).toBe("var(--af-text)");
+    expect(themeBtn.style.borderColor).toBe("var(--af-text-tertiary)");
+
+    await user.unhover(themeBtn);
+    expect(themeBtn.style.color).toBe("var(--af-text-secondary)");
+    expect(themeBtn.style.borderColor).toBe("var(--border)");
+  });
+
+  it("shows fallback when user has no name", () => {
+    mockUseSession.mockReturnValue({ data: { user: { name: null, email: null } } });
+    render(<Sidebar />);
+    expect(screen.getByText("?")).toBeInTheDocument();
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
+  });
+
+  it("shows fallback when session is null", () => {
+    mockUseSession.mockReturnValue({ data: null });
+    render(<Sidebar />);
+    expect(screen.getByText("?")).toBeInTheDocument();
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
+  });
+
+  it("hover on sign out button changes style", async () => {
+    const user = userEvent.setup();
+    render(<Sidebar />);
+
+    const signOutBtn = screen.getByText("Sign out");
+    await user.hover(signOutBtn);
+    expect(signOutBtn.style.color).toBe("var(--af-danger)");
+    expect(signOutBtn.style.borderColor).toBe("var(--af-danger-subtle)");
+
+    await user.unhover(signOutBtn);
+    expect(signOutBtn.style.color).toBe("var(--af-text-secondary)");
+    expect(signOutBtn.style.borderColor).toBe("var(--border)");
   });
 });

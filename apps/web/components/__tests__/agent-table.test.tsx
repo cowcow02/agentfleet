@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { AgentTable } from "../agent-table";
 import type { Agent } from "@agentfleet/types";
 
@@ -85,5 +86,60 @@ describe("AgentTable", () => {
     render(<AgentTable agents={agents} />);
     expect(screen.getByText("agent-a")).toBeInTheDocument();
     expect(screen.getByText("agent-b")).toBeInTheDocument();
+  });
+
+  it("shows Offline when heartbeat is stale", () => {
+    const staleHeartbeat = new Date(Date.now() - 60000).toISOString();
+    render(<AgentTable agents={[makeAgent({ lastHeartbeat: staleHeartbeat, running: 0 })]} />);
+    expect(screen.getByText("Offline")).toBeInTheDocument();
+  });
+
+  it("hover on agent row changes background via mouseEnter/mouseLeave", () => {
+    render(<AgentTable agents={[makeAgent()]} />);
+
+    // Find the row element containing the agent name
+    const agentNameEl = screen.getByText("code-agent");
+    // The row is the grid div parent - walk up from the name div
+    const row = agentNameEl.parentElement!.parentElement! as HTMLElement;
+
+    fireEvent.mouseEnter(row);
+    expect(row.style.background).toBe("var(--af-surface-hover)");
+
+    fireEvent.mouseLeave(row);
+    expect(row.style.background).toBe("transparent");
+  });
+
+  it("assigns correct tag classes for known tags", () => {
+    const agents = [
+      makeAgent({
+        tags: [
+          "backend",
+          "be",
+          "api",
+          "frontend",
+          "fe",
+          "bug",
+          "feature",
+          "question",
+          "explore",
+          "simple",
+          "refactor",
+          "unknown-tag",
+        ],
+      }),
+    ];
+    render(<AgentTable agents={agents} />);
+    expect(screen.getByText("backend")).toHaveClass("af-tag-backend");
+    expect(screen.getByText("be")).toHaveClass("af-tag-backend");
+    expect(screen.getByText("api")).toHaveClass("af-tag-backend");
+    expect(screen.getByText("frontend")).toHaveClass("af-tag-frontend");
+    expect(screen.getByText("fe")).toHaveClass("af-tag-frontend");
+    expect(screen.getByText("bug")).toHaveClass("af-tag-bug");
+    expect(screen.getByText("feature")).toHaveClass("af-tag-feature");
+    expect(screen.getByText("question")).toHaveClass("af-tag-question");
+    expect(screen.getByText("explore")).toHaveClass("af-tag-question");
+    expect(screen.getByText("simple")).toHaveClass("af-tag-simple");
+    expect(screen.getByText("refactor")).toHaveClass("af-tag-question");
+    expect(screen.getByText("unknown-tag")).toHaveClass("af-tag-default");
   });
 });

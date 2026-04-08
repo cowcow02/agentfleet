@@ -62,16 +62,18 @@ describe("integrations routes", () => {
     });
 
     it("returns config with masked data when integration exists", async () => {
-      mockDbSelect.mockResolvedValue([{
-        id: "int-1",
-        organizationId: "org-test",
-        type: "linear",
-        config: {
-          apiKey: "lin_secret_123",
-          triggerStatus: "In Progress",
-          triggerLabels: ["bug"],
+      mockDbSelect.mockResolvedValue([
+        {
+          id: "int-1",
+          organizationId: "org-test",
+          type: "linear",
+          config: {
+            apiKey: "lin_secret_123",
+            triggerStatus: "In Progress",
+            triggerLabels: ["bug"],
+          },
         },
-      }]);
+      ]);
 
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
@@ -152,6 +154,22 @@ describe("integrations routes", () => {
       expect(res.status).toBe(422);
     });
 
+    it("returns 400 when no organizationId on PUT", async () => {
+      const app = createUnauthenticatedApp();
+      app.route("/", integrationsRouter);
+
+      const res = await app.request("/api/integrations/linear", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: "lin_api_key",
+          triggerStatus: "In Progress",
+          triggerLabels: [],
+        }),
+      });
+      expect(res.status).toBe(400);
+    });
+
     it("returns 400 for non-JSON body", async () => {
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
@@ -212,30 +230,34 @@ describe("integrations routes", () => {
     });
 
     it("fetches and transforms issues from Linear API", async () => {
-      mockDbSelect.mockResolvedValue([{
-        id: "int-1",
-        config: { apiKey: "lin_key_123" },
-      }]);
+      mockDbSelect.mockResolvedValue([
+        {
+          id: "int-1",
+          config: { apiKey: "lin_key_123" },
+        },
+      ]);
 
       const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        new Response(JSON.stringify({
-          data: {
-            issues: {
-              nodes: [
-                {
-                  identifier: "LIN-1",
-                  title: "Fix bug",
-                  description: "A bug",
-                  state: { name: "In Progress" },
-                  labels: { nodes: [{ name: "bug" }] },
-                  priority: 2,
-                  assignee: { name: "Dev" },
-                  url: "https://linear.app/issue/LIN-1",
-                },
-              ],
+        new Response(
+          JSON.stringify({
+            data: {
+              issues: {
+                nodes: [
+                  {
+                    identifier: "LIN-1",
+                    title: "Fix bug",
+                    description: "A bug",
+                    state: { name: "In Progress" },
+                    labels: { nodes: [{ name: "bug" }] },
+                    priority: 2,
+                    assignee: { name: "Dev" },
+                    url: "https://linear.app/issue/LIN-1",
+                  },
+                ],
+              },
             },
-          },
-        }))
+          }),
+        ),
       );
 
       const app = createTestApp("org-test");
@@ -254,10 +276,12 @@ describe("integrations routes", () => {
     });
 
     it("returns 502 when Linear API call fails", async () => {
-      mockDbSelect.mockResolvedValue([{
-        id: "int-1",
-        config: { apiKey: "lin_key_123" },
-      }]);
+      mockDbSelect.mockResolvedValue([
+        {
+          id: "int-1",
+          config: { apiKey: "lin_key_123" },
+        },
+      ]);
 
       const mockFetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
 
@@ -274,14 +298,16 @@ describe("integrations routes", () => {
     });
 
     it("handles empty issues response", async () => {
-      mockDbSelect.mockResolvedValue([{
-        id: "int-1",
-        config: { apiKey: "lin_key_123" },
-      }]);
+      mockDbSelect.mockResolvedValue([
+        {
+          id: "int-1",
+          config: { apiKey: "lin_key_123" },
+        },
+      ]);
 
-      const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        new Response(JSON.stringify({ data: { issues: { nodes: [] } } }))
-      );
+      const mockFetch = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response(JSON.stringify({ data: { issues: { nodes: [] } } })));
 
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
@@ -295,29 +321,91 @@ describe("integrations routes", () => {
       mockFetch.mockRestore();
     });
 
+    it("handles missing data.issues in Linear API response", async () => {
+      mockDbSelect.mockResolvedValue([
+        {
+          id: "int-1",
+          config: { apiKey: "lin_key_123" },
+        },
+      ]);
+
+      const mockFetch = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response(JSON.stringify({ data: {} })));
+
+      const app = createTestApp("org-test");
+      app.route("/", integrationsRouter);
+
+      const res = await app.request("/api/integrations/linear/issues");
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.issues).toEqual([]);
+
+      mockFetch.mockRestore();
+    });
+
+    it("handles completely missing data field in Linear API response", async () => {
+      mockDbSelect.mockResolvedValue([
+        {
+          id: "int-1",
+          config: { apiKey: "lin_key_123" },
+        },
+      ]);
+
+      const mockFetch = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response(JSON.stringify({})));
+
+      const app = createTestApp("org-test");
+      app.route("/", integrationsRouter);
+
+      const res = await app.request("/api/integrations/linear/issues");
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.issues).toEqual([]);
+
+      mockFetch.mockRestore();
+    });
+
+    it("returns 400 when no organizationId on GET issues", async () => {
+      const app = createUnauthenticatedApp();
+      app.route("/", integrationsRouter);
+
+      const res = await app.request("/api/integrations/linear/issues");
+      expect(res.status).toBe(400);
+    });
+
     it("handles null assignee", async () => {
-      mockDbSelect.mockResolvedValue([{
-        id: "int-1",
-        config: { apiKey: "lin_key_123" },
-      }]);
+      mockDbSelect.mockResolvedValue([
+        {
+          id: "int-1",
+          config: { apiKey: "lin_key_123" },
+        },
+      ]);
 
       const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        new Response(JSON.stringify({
-          data: {
-            issues: {
-              nodes: [{
-                identifier: "LIN-2",
-                title: "Task",
-                description: null,
-                state: { name: "Todo" },
-                labels: { nodes: [] },
-                priority: null,
-                assignee: null,
-                url: "https://linear.app/issue/LIN-2",
-              }],
+        new Response(
+          JSON.stringify({
+            data: {
+              issues: {
+                nodes: [
+                  {
+                    identifier: "LIN-2",
+                    title: "Task",
+                    description: null,
+                    state: { name: "Todo" },
+                    labels: { nodes: [] },
+                    priority: null,
+                    assignee: null,
+                    url: "https://linear.app/issue/LIN-2",
+                  },
+                ],
+              },
             },
-          },
-        }))
+          }),
+        ),
       );
 
       const app = createTestApp("org-test");

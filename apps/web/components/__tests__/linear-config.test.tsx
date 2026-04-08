@@ -218,4 +218,131 @@ describe("LinearConfig", () => {
 
     vi.restoreAllMocks();
   });
+
+  it("shows error toast on delete failure", async () => {
+    mockFetchLinearConfig.mockResolvedValue({
+      configured: true,
+      triggerStatus: "In Progress",
+      triggerLabels: [],
+    });
+    mockDeleteLinearConfig.mockRejectedValue(new Error("Delete failed"));
+
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    const user = userEvent.setup();
+    render(<LinearConfig />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("Delete failed");
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it("shows generic error toast on delete failure with non-Error", async () => {
+    mockFetchLinearConfig.mockResolvedValue({
+      configured: true,
+      triggerStatus: "In Progress",
+      triggerLabels: [],
+    });
+    mockDeleteLinearConfig.mockRejectedValue("unknown");
+
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    const user = userEvent.setup();
+    render(<LinearConfig />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("Failed to remove config");
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it("handles fetchLinearConfig error gracefully", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFetchLinearConfig.mockRejectedValue(new Error("Network error"));
+
+    render(<LinearConfig />);
+
+    // Should transition from loading to rendered state
+    await waitFor(() => {
+      expect(screen.getByText("Linear Integration")).toBeInTheDocument();
+      expect(screen.getByText("Not configured")).toBeInTheDocument();
+    });
+
+    consoleSpy.mockRestore();
+  });
+
+  it("shows generic error message on save failure with non-Error", async () => {
+    mockFetchLinearConfig.mockResolvedValue({ configured: false });
+    mockUpdateLinearConfig.mockRejectedValue("unknown");
+
+    const user = userEvent.setup();
+    render(<LinearConfig />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/API Key/)).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByPlaceholderText("lin_api_xxxxxxxx"), "some-key");
+
+    await user.click(screen.getByRole("button", { name: "Save Configuration" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Failed to save.")).toBeInTheDocument();
+    });
+  });
+
+  it("copies webhook URL to clipboard", async () => {
+    // In jsdom, navigator.clipboard may or may not exist
+    // We need to ensure it exists and mock writeText
+    if (!navigator.clipboard) {
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: vi.fn() },
+        configurable: true,
+        writable: true,
+      });
+    }
+    const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+
+    mockFetchLinearConfig.mockResolvedValue({
+      configured: true,
+      triggerStatus: "In Progress",
+      triggerLabels: [],
+      webhookUrl: "https://fleet.example.com/api/webhooks/linear",
+    });
+
+    const user = userEvent.setup();
+    const { container } = render(<LinearConfig />);
+
+    await waitFor(() => {
+      expect(screen.getByText("https://fleet.example.com/api/webhooks/linear")).toBeInTheDocument();
+    });
+
+    // Find the copy button inside the af-mono-box div
+    const monoBox = container.querySelector(".af-mono-box")!;
+    const copyButton = monoBox.querySelector("button")!;
+    expect(copyButton).toBeTruthy();
+    await user.click(copyButton);
+
+    await waitFor(() => {
+      expect(writeTextSpy).toHaveBeenCalledWith("https://fleet.example.com/api/webhooks/linear");
+      expect(mockToastSuccess).toHaveBeenCalledWith("Copied");
+    });
+
+    writeTextSpy.mockRestore();
+  });
 });

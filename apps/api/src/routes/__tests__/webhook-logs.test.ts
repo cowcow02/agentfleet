@@ -47,16 +47,18 @@ describe("GET /api/webhook-logs", () => {
   });
 
   it("returns logs with pagination", async () => {
-    const rows = [{
-      id: 1,
-      organizationId: "org-test",
-      integration: "linear",
-      action: "dispatched",
-      reason: "Dispatched as d-1",
-      payload: { type: "Issue" },
-      dispatchId: "d-1",
-      createdAt: now,
-    }];
+    const rows = [
+      {
+        id: 1,
+        organizationId: "org-test",
+        integration: "linear",
+        action: "dispatched",
+        reason: "Dispatched as d-1",
+        payload: { type: "Issue" },
+        dispatchId: "d-1",
+        createdAt: now,
+      },
+    ];
 
     mockDbSelect.mockResolvedValue(rows);
     mockDbCount.mockResolvedValue([{ total: 1 }]);
@@ -96,5 +98,15 @@ describe("GET /api/webhook-logs", () => {
 
     const res = await app.request("/api/webhook-logs");
     expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid query parameters", async () => {
+    const app = createTestApp("org-test");
+    app.route("/", webhookLogsRouter);
+
+    const res = await app.request("/api/webhook-logs?limit=notanumber");
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBeDefined();
   });
 });

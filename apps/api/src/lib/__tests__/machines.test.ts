@@ -43,9 +43,15 @@ describe("machines", () => {
 
   afterEach(() => {
     // Clean up any registered machines
-    try { removeMachine(testOrg, "m1"); } catch {}
-    try { removeMachine(testOrg, "m2"); } catch {}
-    try { removeMachine(testOrg2, "m3"); } catch {}
+    try {
+      removeMachine(testOrg, "m1");
+    } catch {}
+    try {
+      removeMachine(testOrg, "m2");
+    } catch {}
+    try {
+      removeMachine(testOrg2, "m3");
+    } catch {}
   });
 
   describe("registerMachine", () => {
@@ -69,9 +75,7 @@ describe("machines", () => {
 
     it("emits agent:update event", () => {
       const ws = makeWs();
-      registerMachine(testOrg, "m1", ws, [
-        { name: "agent-a", tags: ["ts"], capacity: 1 },
-      ]);
+      registerMachine(testOrg, "m1", ws, [{ name: "agent-a", tags: ["ts"], capacity: 1 }]);
 
       expect(eventBus.emitAgentUpdate).toHaveBeenCalled();
       expect(eventBus.emitFeedEvent).toHaveBeenCalled();
@@ -198,6 +202,23 @@ describe("machines", () => {
       registerMachine(testOrg, "m1", ws, [{ name: "a1", tags: ["ts"], capacity: 5 }]);
       expect(getRunningJobsForOrg(testOrg)).toBe(0);
     });
+
+    it("returns 0 for org with no machines", () => {
+      expect(getRunningJobsForOrg("no-such-org")).toBe(0);
+    });
+
+    it("skips machines from different orgs", () => {
+      const ws1 = makeWs();
+      const ws2 = makeWs();
+      const m1 = registerMachine(testOrg, "m1", ws1, [{ name: "a1", tags: ["ts"], capacity: 5 }]);
+      const m2 = registerMachine(testOrg2, "m3", ws2, [{ name: "a2", tags: ["py"], capacity: 3 }]);
+      m1.agents.get("a1")!.running = 2;
+      m2.agents.get("a2")!.running = 3;
+
+      // Should only count testOrg's running jobs
+      expect(getRunningJobsForOrg(testOrg)).toBe(2);
+      expect(getRunningJobsForOrg(testOrg2)).toBe(3);
+    });
   });
 
   describe("findAgentForDispatch", () => {
@@ -228,9 +249,7 @@ describe("machines", () => {
 
     it("returns null when no tags match", () => {
       const ws = makeWs();
-      registerMachine(testOrg, "m1", ws, [
-        { name: "a1", tags: ["go", "rust"], capacity: 5 },
-      ]);
+      registerMachine(testOrg, "m1", ws, [{ name: "a1", tags: ["go", "rust"], capacity: 5 }]);
 
       const result = findAgentForDispatch(testOrg, ["ts", "python"]);
       expect(result).toBeNull();
@@ -238,9 +257,7 @@ describe("machines", () => {
 
     it("returns null when no agent has capacity", () => {
       const ws = makeWs();
-      const m = registerMachine(testOrg, "m1", ws, [
-        { name: "a1", tags: ["ts"], capacity: 1 },
-      ]);
+      const m = registerMachine(testOrg, "m1", ws, [{ name: "a1", tags: ["ts"], capacity: 1 }]);
       m.agents.get("a1")!.running = 1;
 
       const result = findAgentForDispatch(testOrg, ["ts"]);
@@ -253,13 +270,10 @@ describe("machines", () => {
 
     it("does not match agents from different org", () => {
       const ws = makeWs();
-      registerMachine(testOrg2, "m3", ws, [
-        { name: "a1", tags: ["ts"], capacity: 5 },
-      ]);
+      registerMachine(testOrg2, "m3", ws, [{ name: "a1", tags: ["ts"], capacity: 5 }]);
 
       const result = findAgentForDispatch(testOrg, ["ts"]);
       expect(result).toBeNull();
     });
   });
-
 });

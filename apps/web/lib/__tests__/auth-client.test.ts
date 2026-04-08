@@ -34,11 +34,11 @@ beforeEach(() => {
 
 describe("auth-client", () => {
   describe("apiKey.listApiKeys", () => {
-    it("calls GET /api/auth/api-key/list with credentials", async () => {
+    it("calls GET /api/api-keys/list with credentials", async () => {
       mockFetch.mockResolvedValue(jsonResponse([{ id: "k1", name: "test" }]));
       const result = await apiKey.listApiKeys();
 
-      expect(mockFetch).toHaveBeenCalledWith("/api/auth/api-key/list", { credentials: "include" });
+      expect(mockFetch).toHaveBeenCalledWith("/api/api-keys/list", { credentials: "include" });
       expect(result.data).toEqual([{ id: "k1", name: "test" }]);
       expect(result.error).toBeNull();
     });
@@ -53,13 +53,13 @@ describe("auth-client", () => {
   });
 
   describe("apiKey.createApiKey", () => {
-    it("calls POST /api/auth/api-key/create with body", async () => {
+    it("calls POST /api/api-keys/create with body", async () => {
       const created = { id: "k2", name: "new-key", key: "sk_abc" };
       mockFetch.mockResolvedValue(jsonResponse(created));
 
       const result = await apiKey.createApiKey({ name: "new-key" });
 
-      expect(mockFetch).toHaveBeenCalledWith("/api/auth/api-key/create", {
+      expect(mockFetch).toHaveBeenCalledWith("/api/api-keys/create", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -87,12 +87,12 @@ describe("auth-client", () => {
   });
 
   describe("apiKey.deleteApiKey", () => {
-    it("calls POST /api/auth/api-key/delete with keyId", async () => {
+    it("calls POST /api/api-keys/delete with keyId", async () => {
       mockFetch.mockResolvedValue(jsonResponse({ success: true }));
 
       const result = await apiKey.deleteApiKey({ keyId: "k1" });
 
-      expect(mockFetch).toHaveBeenCalledWith("/api/auth/api-key/delete", {
+      expect(mockFetch).toHaveBeenCalledWith("/api/api-keys/delete", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

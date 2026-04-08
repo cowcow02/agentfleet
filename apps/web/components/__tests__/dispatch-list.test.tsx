@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { DispatchList } from "../dispatch-list";
 import type { Dispatch } from "@agentfleet/types";
 
@@ -102,5 +103,99 @@ describe("DispatchList", () => {
     render(<DispatchList dispatches={dispatches} />);
     expect(screen.getByText("Manual")).toBeInTheDocument();
     expect(screen.getByText("Linear")).toBeInTheDocument();
+  });
+
+  it("formats duration in hours for long durations", () => {
+    // 3661 seconds = 1h 1m 1s -> should display as "1h 1m"
+    render(<DispatchList dispatches={[makeDispatch({ durationMs: 3661000 })]} />);
+    expect(screen.getByText("1h 1m")).toBeInTheDocument();
+  });
+
+  it("shows timeline toggle for completed dispatch", () => {
+    render(<DispatchList dispatches={[makeDispatch({ status: "completed", messages: [] })]} />);
+    expect(screen.getByText("Show timeline")).toBeInTheDocument();
+  });
+
+  it("toggles timeline open and closed", async () => {
+    const user = userEvent.setup();
+    const dispatches = [
+      makeDispatch({
+        status: "completed",
+        messages: [
+          { message: "Started work", timestamp: "2025-01-15T10:00:05Z" },
+          { message: "Done", timestamp: "2025-01-15T10:01:00Z" },
+        ],
+      }),
+    ];
+    render(<DispatchList dispatches={dispatches} />);
+
+    // Open timeline
+    await user.click(screen.getByText("Show timeline"));
+    expect(screen.getByText("Hide timeline")).toBeInTheDocument();
+    expect(screen.getByText("Started work")).toBeInTheDocument();
+    expect(screen.getByText("Done")).toBeInTheDocument();
+
+    // Close timeline
+    await user.click(screen.getByText("Hide timeline"));
+    expect(screen.getByText("Show timeline")).toBeInTheDocument();
+    expect(screen.queryByText("Started work")).not.toBeInTheDocument();
+  });
+
+  it("shows timeline for failed dispatch even without messages", () => {
+    render(<DispatchList dispatches={[makeDispatch({ status: "failed", messages: [] })]} />);
+    expect(screen.getByText("Show timeline")).toBeInTheDocument();
+  });
+
+  it("does not show timeline toggle for dispatched status with no messages", () => {
+    render(<DispatchList dispatches={[makeDispatch({ status: "dispatched", messages: [] })]} />);
+    expect(screen.queryByText("Show timeline")).not.toBeInTheDocument();
+  });
+
+  it("renders timeline message without timestamp", async () => {
+    const user = userEvent.setup();
+    const dispatches = [
+      makeDispatch({
+        status: "completed",
+        messages: [{ message: "No timestamp msg", timestamp: undefined as unknown as string }],
+      }),
+    ];
+    render(<DispatchList dispatches={dispatches} />);
+    await user.click(screen.getByText("Show timeline"));
+    expect(screen.getByText("No timestamp msg")).toBeInTheDocument();
+  });
+
+  it("shows dash for null agentName", () => {
+    render(<DispatchList dispatches={[makeDispatch({ agentName: null as unknown as string })]} />);
+    expect(screen.getByText("\u2014")).toBeInTheDocument();
+  });
+
+  it("defaults source to manual when undefined", () => {
+    render(
+      <DispatchList dispatches={[makeDispatch({ source: undefined as unknown as string })]} />,
+    );
+    expect(screen.getByText("Manual")).toBeInTheDocument();
+  });
+
+  it("shows 'Running:' prefix for running status", () => {
+    render(<DispatchList dispatches={[makeDispatch({ status: "running", durationMs: 5000 })]} />);
+    expect(screen.getByText("5s")).toBeInTheDocument();
+  });
+
+  it("shows 'Failed after' prefix for failed status", () => {
+    render(<DispatchList dispatches={[makeDispatch({ status: "failed", durationMs: 10000 })]} />);
+    expect(screen.getByText("10s")).toBeInTheDocument();
+  });
+
+  it("shows timeline with messages for running dispatch", async () => {
+    const user = userEvent.setup();
+    const dispatches = [
+      makeDispatch({
+        status: "running",
+        messages: [{ message: "Working on it", timestamp: "2025-01-15T10:00:05Z" }],
+      }),
+    ];
+    render(<DispatchList dispatches={dispatches} />);
+    await user.click(screen.getByText("Show timeline"));
+    expect(screen.getByText("Working on it")).toBeInTheDocument();
   });
 });

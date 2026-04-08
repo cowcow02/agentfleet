@@ -97,11 +97,7 @@ describe("WebSocket handler", () => {
       const handler = createWsHandler(wss as any);
       const socket = createMockSocket();
 
-      await handler(
-        { headers: {} } as any,
-        socket as any,
-        Buffer.alloc(0)
-      );
+      await handler({ headers: {} } as any, socket as any, Buffer.alloc(0));
 
       expect(socket.write).toHaveBeenCalledWith("HTTP/1.1 401 Unauthorized\r\n\r\n");
       expect(socket.destroy).toHaveBeenCalled();
@@ -115,7 +111,7 @@ describe("WebSocket handler", () => {
       await handler(
         { headers: { authorization: "Basic abc" } } as any,
         socket as any,
-        Buffer.alloc(0)
+        Buffer.alloc(0),
       );
 
       expect(socket.write).toHaveBeenCalledWith("HTTP/1.1 401 Unauthorized\r\n\r\n");
@@ -131,7 +127,7 @@ describe("WebSocket handler", () => {
       await handler(
         { headers: { authorization: "Bearer token123" } } as any,
         socket as any,
-        Buffer.alloc(0)
+        Buffer.alloc(0),
       );
 
       expect(socket.write).toHaveBeenCalledWith("HTTP/1.1 401 Unauthorized\r\n\r\n");
@@ -150,10 +146,27 @@ describe("WebSocket handler", () => {
       await handler(
         { headers: { authorization: "Bearer token123" } } as any,
         socket as any,
-        Buffer.alloc(0)
+        Buffer.alloc(0),
       );
 
-      expect(socket.write).toHaveBeenCalledWith("HTTP/1.1 403 Forbidden\r\n\r\n");
+      expect(socket.write).toHaveBeenCalledWith("HTTP/1.1 401 Unauthorized\r\n\r\n");
+    });
+
+    it("rejects when getSession throws an error", async () => {
+      vi.mocked(auth.api.getSession).mockRejectedValue(new Error("auth service down"));
+
+      const wss = createMockWss();
+      const handler = createWsHandler(wss as any);
+      const socket = createMockSocket();
+
+      await handler(
+        { headers: { authorization: "Bearer token123" } } as any,
+        socket as any,
+        Buffer.alloc(0),
+      );
+
+      expect(socket.write).toHaveBeenCalledWith("HTTP/1.1 401 Unauthorized\r\n\r\n");
+      expect(socket.destroy).toHaveBeenCalled();
     });
 
     it("accepts valid session and completes upgrade", async () => {
@@ -176,7 +189,7 @@ describe("WebSocket handler", () => {
       await handler(
         { headers: { authorization: "Bearer valid-token" } } as any,
         socket as any,
-        Buffer.alloc(0)
+        Buffer.alloc(0),
       );
 
       expect(wss.handleUpgrade).toHaveBeenCalled();
@@ -206,7 +219,7 @@ describe("WebSocket handler", () => {
       await handler(
         { headers: { authorization: "Bearer token" } } as any,
         socket as any,
-        Buffer.alloc(0)
+        Buffer.alloc(0),
       );
 
       return mockWsInstance;
@@ -215,24 +228,24 @@ describe("WebSocket handler", () => {
     it("handles register message", async () => {
       const { ws, emit } = await connectWs();
 
-      emit("message", JSON.stringify({
-        type: "register",
-        machine: "m1",
-        agents: [{ name: "a1", tags: ["ts"], capacity: 2 }],
-      }));
+      emit(
+        "message",
+        JSON.stringify({
+          type: "register",
+          machine: "m1",
+          agents: [{ name: "a1", tags: ["ts"], capacity: 2 }],
+        }),
+      );
 
       // Need to wait for async handler
       await vi.waitFor(() => {
-        expect(registerMachine).toHaveBeenCalledWith(
-          "org-1",
-          "m1",
-          ws,
-          [{ name: "a1", tags: ["ts"], capacity: 2 }]
-        );
+        expect(registerMachine).toHaveBeenCalledWith("org-1", "m1", ws, [
+          { name: "a1", tags: ["ts"], capacity: 2 },
+        ]);
       });
 
       expect(ws.send).toHaveBeenCalledWith(
-        JSON.stringify({ type: "registered", machine: "m1", agents: 1 })
+        JSON.stringify({ type: "registered", machine: "m1", agents: 1 }),
       );
     });
 
@@ -240,11 +253,14 @@ describe("WebSocket handler", () => {
       const { emit } = await connectWs();
 
       // Must register first to set machineName
-      emit("message", JSON.stringify({
-        type: "register",
-        machine: "m1",
-        agents: [{ name: "a1", tags: ["ts"], capacity: 1 }],
-      }));
+      emit(
+        "message",
+        JSON.stringify({
+          type: "register",
+          machine: "m1",
+          agents: [{ name: "a1", tags: ["ts"], capacity: 1 }],
+        }),
+      );
 
       await vi.waitFor(() => {
         expect(registerMachine).toHaveBeenCalled();
@@ -261,24 +277,25 @@ describe("WebSocket handler", () => {
     it("handles status message", async () => {
       const { ws, emit } = await connectWs();
 
-      emit("message", JSON.stringify({
-        type: "status",
-        dispatch_id: "d-1",
-        message: "Running step 1",
-        timestamp: "2024-01-01T00:00:00Z",
-      }));
+      emit(
+        "message",
+        JSON.stringify({
+          type: "status",
+          dispatch_id: "d-1",
+          message: "Running step 1",
+          timestamp: "2024-01-01T00:00:00Z",
+        }),
+      );
 
       await vi.waitFor(() => {
         expect(appendDispatchMessage).toHaveBeenCalledWith(
           "d-1",
           "Running step 1",
-          "2024-01-01T00:00:00Z"
+          "2024-01-01T00:00:00Z",
         );
       });
 
-      expect(ws.send).toHaveBeenCalledWith(
-        JSON.stringify({ type: "ack", dispatch_id: "d-1" })
-      );
+      expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ type: "ack", dispatch_id: "d-1" }));
     });
 
     it("handles complete message with duration conversion", async () => {
@@ -292,21 +309,22 @@ describe("WebSocket handler", () => {
         lastHeartbeat: new Date(),
       } as any);
 
-      emit("message", JSON.stringify({
-        type: "complete",
-        dispatch_id: "d-1",
-        success: true,
-        exit_code: 0,
-        duration_seconds: 5.5,
-      }));
+      emit(
+        "message",
+        JSON.stringify({
+          type: "complete",
+          dispatch_id: "d-1",
+          success: true,
+          exit_code: 0,
+          duration_seconds: 5.5,
+        }),
+      );
 
       await vi.waitFor(() => {
         expect(completeDispatch).toHaveBeenCalledWith("d-1", true, 0, 5.5);
       });
 
-      expect(ws.send).toHaveBeenCalledWith(
-        JSON.stringify({ type: "ack", dispatch_id: "d-1" })
-      );
+      expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ type: "ack", dispatch_id: "d-1" }));
     });
 
     it("decrements agent running count on complete", async () => {
@@ -321,13 +339,16 @@ describe("WebSocket handler", () => {
         lastHeartbeat: new Date(),
       } as any);
 
-      emit("message", JSON.stringify({
-        type: "complete",
-        dispatch_id: "d-1",
-        success: true,
-        exit_code: 0,
-        duration_seconds: 1,
-      }));
+      emit(
+        "message",
+        JSON.stringify({
+          type: "complete",
+          dispatch_id: "d-1",
+          success: true,
+          exit_code: 0,
+          duration_seconds: 1,
+        }),
+      );
 
       await vi.waitFor(() => {
         expect(agent.running).toBe(0);
@@ -343,7 +364,7 @@ describe("WebSocket handler", () => {
 
       await vi.waitFor(() => {
         expect(ws.send).toHaveBeenCalledWith(
-          JSON.stringify({ type: "error", message: "Invalid JSON" })
+          JSON.stringify({ type: "error", message: "Invalid JSON" }),
         );
       });
     });
@@ -354,21 +375,77 @@ describe("WebSocket handler", () => {
       emit("message", JSON.stringify({ type: "unknown_type" }));
 
       await vi.waitFor(() => {
-        expect(ws.send).toHaveBeenCalledWith(
-          expect.stringContaining('"type":"error"')
-        );
+        expect(ws.send).toHaveBeenCalledWith(expect.stringContaining('"type":"error"'));
       });
+    });
+
+    it("ignores heartbeat when not registered (machineName is null)", async () => {
+      const { emit } = await connectWs();
+
+      // Send heartbeat without registering first
+      emit("message", JSON.stringify({ type: "heartbeat" }));
+
+      // Wait a tick
+      await vi.waitFor(() => {
+        // updateHeartbeat should NOT be called since machineName is null
+        expect(updateHeartbeat).not.toHaveBeenCalled();
+      });
+    });
+
+    it("handles complete when getMachineByWs returns null", async () => {
+      const { ws, emit } = await connectWs();
+
+      vi.mocked(getMachineByWs).mockReturnValue(undefined);
+
+      emit(
+        "message",
+        JSON.stringify({
+          type: "complete",
+          dispatch_id: "d-1",
+          success: true,
+          exit_code: 0,
+          duration_seconds: 1.0,
+        }),
+      );
+
+      await vi.waitFor(() => {
+        expect(completeDispatch).toHaveBeenCalledWith("d-1", true, 0, 1.0);
+      });
+
+      // emitAgentUpdate should NOT be called since there's no machine
+      expect(eventBus.emitAgentUpdate).not.toHaveBeenCalled();
+    });
+
+    it("handles ws error event", async () => {
+      const { emit } = await connectWs();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      emit("error", new Error("connection reset"));
+
+      expect(consoleSpy).toHaveBeenCalledWith("[WS] Error:", "connection reset");
+      consoleSpy.mockRestore();
+    });
+
+    it("does not call removeMachine on close if not registered", async () => {
+      const { emit } = await connectWs();
+
+      emit("close");
+
+      expect(removeMachine).not.toHaveBeenCalled();
     });
 
     it("removes machine on close", async () => {
       const { emit } = await connectWs();
 
       // Register first
-      emit("message", JSON.stringify({
-        type: "register",
-        machine: "m1",
-        agents: [{ name: "a1", tags: ["ts"], capacity: 1 }],
-      }));
+      emit(
+        "message",
+        JSON.stringify({
+          type: "register",
+          machine: "m1",
+          agents: [{ name: "a1", tags: ["ts"], capacity: 1 }],
+        }),
+      );
 
       await vi.waitFor(() => {
         expect(registerMachine).toHaveBeenCalled();

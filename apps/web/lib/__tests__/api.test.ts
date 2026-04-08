@@ -128,6 +128,14 @@ describe("api client", () => {
       const url = mockFetch.mock.calls[0][0] as string;
       expect(url).toBe("/api/dispatches");
     });
+
+    it("appends source and agent params", async () => {
+      mockFetch.mockResolvedValue(jsonResponse({ dispatches: [], total: 0 }));
+      await fetchDispatches({ source: "linear", agent: "code-agent" });
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain("source=linear");
+      expect(url).toContain("agent=code-agent");
+    });
   });
 
   describe("fetchDispatch", () => {

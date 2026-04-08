@@ -192,6 +192,52 @@ describe("useSSE", () => {
     expect(es.closed).toBe(true);
   });
 
+  it("sets connected to false on error", () => {
+    const onEvent = vi.fn();
+    const { result } = renderHook(() => useSSE(onEvent));
+
+    act(() => {
+      MockEventSource.instances[0].simulateOpen();
+    });
+    expect(result.current.connected).toBe(true);
+
+    act(() => {
+      MockEventSource.instances[0].simulateError();
+    });
+    expect(result.current.connected).toBe(false);
+  });
+
+  it("caps reconnect delay at MAX_RECONNECT_DELAY (30s)", () => {
+    const onEvent = vi.fn();
+    renderHook(() => useSSE(onEvent));
+
+    // Error multiple times to grow the delay: 3000 -> 6000 -> 12000 -> 24000 -> 48000 (capped at 30000)
+    for (let i = 0; i < 4; i++) {
+      act(() => {
+        MockEventSource.instances[MockEventSource.instances.length - 1].simulateError();
+        vi.advanceTimersByTime(60000); // advance enough to always reconnect
+      });
+    }
+
+    const count = MockEventSource.instances.length;
+    // Trigger one more error at delay=48000 which should be capped at 30000
+    act(() => {
+      MockEventSource.instances[MockEventSource.instances.length - 1].simulateError();
+    });
+
+    // At 29999ms, should NOT have reconnected
+    act(() => {
+      vi.advanceTimersByTime(29999);
+    });
+    expect(MockEventSource.instances.length).toBe(count);
+
+    // At 30000ms, should reconnect
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(MockEventSource.instances.length).toBe(count + 1);
+  });
+
   it("clears pending reconnect timeout on unmount", () => {
     const onEvent = vi.fn();
     const { unmount } = renderHook(() => useSSE(onEvent));
