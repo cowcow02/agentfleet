@@ -1161,6 +1161,19 @@ wss.on('connection', (ws) => {
 });
 
 // ---------------------------------------------------------------------------
+// Stale connection cleanup — every 30s, remove machines with dead WebSockets
+// ---------------------------------------------------------------------------
+setInterval(() => {
+  for (const [key, machine] of machines) {
+    if (machine.ws.readyState !== 1) {
+      const teamName = (teams.get(machine.teamId) || {}).name || machine.teamId;
+      log(`[${teamName}] Cleaning up stale machine "${machine.machineName}"`);
+      machines.delete(key);
+    }
+  }
+}, 30000);
+
+// ---------------------------------------------------------------------------
 // Graceful shutdown
 // ---------------------------------------------------------------------------
 function shutdown() {
