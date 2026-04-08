@@ -11,7 +11,8 @@ import type {
   Dispatch,
 } from "@agentfleet/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9900";
+// Uses relative URLs — Next.js rewrites proxy /api/* to the API server
+const API_URL = "";
 
 class ApiError extends Error {
   constructor(
@@ -24,10 +25,7 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_URL}${path}`;
   const res = await fetch(url, {
     ...options,
@@ -80,9 +78,7 @@ export function fetchDispatch(id: string): Promise<Dispatch> {
   return request<Dispatch>(`/api/dispatches/${id}`);
 }
 
-export function createDispatch(
-  data: CreateDispatchRequest,
-): Promise<CreateDispatchResponse> {
+export function createDispatch(data: CreateDispatchRequest): Promise<CreateDispatchResponse> {
   return request<CreateDispatchResponse>("/api/dispatches", {
     method: "POST",
     body: JSON.stringify(data),
@@ -101,9 +97,7 @@ export function fetchLinearConfig(): Promise<LinearConfigResponse> {
   return request<LinearConfigResponse>("/api/integrations/linear");
 }
 
-export function updateLinearConfig(
-  data: UpdateLinearConfigRequest,
-): Promise<LinearConfigResponse> {
+export function updateLinearConfig(data: UpdateLinearConfigRequest): Promise<LinearConfigResponse> {
   return request<LinearConfigResponse>("/api/integrations/linear", {
     method: "PUT",
     body: JSON.stringify(data),
@@ -130,9 +124,7 @@ export function fetchWebhookLogs(params?: {
   if (params?.limit) query.set("limit", String(params.limit));
   if (params?.offset) query.set("offset", String(params.offset));
   const qs = query.toString();
-  return request<ListWebhookLogsResponse>(
-    `/api/webhook-logs${qs ? `?${qs}` : ""}`,
-  );
+  return request<ListWebhookLogsResponse>(`/api/webhook-logs${qs ? `?${qs}` : ""}`);
 }
 
 export { ApiError };

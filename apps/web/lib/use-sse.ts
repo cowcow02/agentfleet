@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import type { SseEvent } from "@agentfleet/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9900";
+// Uses relative URL — Next.js rewrites proxy /api/* to the API server
 const RECONNECT_DELAY = 3000;
 const MAX_RECONNECT_DELAY = 30000;
 
@@ -25,9 +25,7 @@ export function useSSE(onEvent: SseEventHandler) {
       eventSourceRef.current.close();
     }
 
-    const es = new EventSource(`${API_URL}/api/sse`, {
-      withCredentials: true,
-    });
+    const es = new EventSource(`/api/sse`);
 
     es.onopen = () => {
       setConnected(true);
