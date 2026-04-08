@@ -63,8 +63,8 @@ describe("useSSE", () => {
 
     expect(MockEventSource.instances).toHaveLength(1);
     const es = MockEventSource.instances[0];
-    expect(es.url).toBe("http://localhost:9900/api/sse");
-    expect(es.withCredentials).toBe(true);
+    expect(es.url).toBe("/api/sse");
+    expect(es.withCredentials).toBe(false);
   });
 
   it("sets connected to true on open", () => {

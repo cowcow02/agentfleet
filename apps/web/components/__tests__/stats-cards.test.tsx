@@ -49,9 +49,10 @@ describe("StatsCards", () => {
     expect(zeroes).toHaveLength(5);
   });
 
-  it("shows dashes when stats is null (loading state)", () => {
+  it("shows em-dash when stats is null (loading state)", () => {
     render(<StatsCards stats={null} />);
-    const dashes = screen.getAllByText("--");
+    // Component renders U+2014 em-dash character when stats is null
+    const dashes = screen.getAllByText("\u2014");
     expect(dashes).toHaveLength(5);
   });
 });

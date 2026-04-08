@@ -59,9 +59,7 @@ describe("api client", () => {
     });
 
     it("throws ApiError on non-ok response", async () => {
-      mockFetch.mockResolvedValue(
-        errorResponse(404, { error: "Not found", code: "NOT_FOUND" }),
-      );
+      mockFetch.mockResolvedValue(errorResponse(404, { error: "Not found", code: "NOT_FOUND" }));
       await expect(fetchDashboardStats()).rejects.toThrow(ApiError);
       try {
         await fetchDashboardStats();
@@ -101,7 +99,7 @@ describe("api client", () => {
       mockFetch.mockResolvedValue(jsonResponse(data));
       const result = await fetchDashboardStats();
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/dashboard/stats",
+        "/api/dashboard/stats",
         expect.objectContaining({ credentials: "include" }),
       );
       expect(result).toEqual(data);
@@ -112,10 +110,7 @@ describe("api client", () => {
     it("calls GET /api/dispatches with no params", async () => {
       mockFetch.mockResolvedValue(jsonResponse({ dispatches: [], total: 0 }));
       await fetchDispatches();
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/dispatches",
-        expect.any(Object),
-      );
+      expect(mockFetch).toHaveBeenCalledWith("/api/dispatches", expect.any(Object));
     });
 
     it("appends query params when provided", async () => {
@@ -131,7 +126,7 @@ describe("api client", () => {
       mockFetch.mockResolvedValue(jsonResponse({ dispatches: [], total: 0 }));
       await fetchDispatches({ status: "", source: undefined });
       const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toBe("http://localhost:9900/api/dispatches");
+      expect(url).toBe("/api/dispatches");
     });
   });
 
@@ -140,10 +135,7 @@ describe("api client", () => {
       const dispatch = { id: "abc-123", title: "Test" };
       mockFetch.mockResolvedValue(jsonResponse(dispatch));
       const result = await fetchDispatch("abc-123");
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/dispatches/abc-123",
-        expect.any(Object),
-      );
+      expect(mockFetch).toHaveBeenCalledWith("/api/dispatches/abc-123", expect.any(Object));
       expect(result).toEqual(dispatch);
     });
   });
@@ -176,10 +168,7 @@ describe("api client", () => {
       const data = { agents: [], machinesOnline: 0 };
       mockFetch.mockResolvedValue(jsonResponse(data));
       const result = await fetchAgents();
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/agents",
-        expect.any(Object),
-      );
+      expect(mockFetch).toHaveBeenCalledWith("/api/agents", expect.any(Object));
       expect(result).toEqual(data);
     });
   });
@@ -189,10 +178,7 @@ describe("api client", () => {
       const data = { configured: true, triggerStatus: "In Progress" };
       mockFetch.mockResolvedValue(jsonResponse(data));
       const result = await fetchLinearConfig();
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/integrations/linear",
-        expect.any(Object),
-      );
+      expect(mockFetch).toHaveBeenCalledWith("/api/integrations/linear", expect.any(Object));
       expect(result).toEqual(data);
     });
   });
@@ -208,7 +194,7 @@ describe("api client", () => {
       mockFetch.mockResolvedValue(jsonResponse(response));
       const result = await updateLinearConfig(body);
       const [url, opts] = mockFetch.mock.calls[0];
-      expect(url).toBe("http://localhost:9900/api/integrations/linear");
+      expect(url).toBe("/api/integrations/linear");
       expect(opts.method).toBe("PUT");
       expect(JSON.parse(opts.body)).toEqual(body);
       expect(result).toEqual(response);
@@ -225,7 +211,7 @@ describe("api client", () => {
       });
       await deleteLinearConfig();
       const [url, opts] = mockFetch.mock.calls[0];
-      expect(url).toBe("http://localhost:9900/api/integrations/linear");
+      expect(url).toBe("/api/integrations/linear");
       expect(opts.method).toBe("DELETE");
     });
   });
@@ -235,10 +221,7 @@ describe("api client", () => {
       const data = { issues: [] };
       mockFetch.mockResolvedValue(jsonResponse(data));
       const result = await fetchLinearIssues();
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/integrations/linear/issues",
-        expect.any(Object),
-      );
+      expect(mockFetch).toHaveBeenCalledWith("/api/integrations/linear/issues", expect.any(Object));
       expect(result).toEqual(data);
     });
   });
@@ -247,10 +230,7 @@ describe("api client", () => {
     it("calls GET /api/webhook-logs with no params", async () => {
       mockFetch.mockResolvedValue(jsonResponse({ logs: [], total: 0 }));
       await fetchWebhookLogs();
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/webhook-logs",
-        expect.any(Object),
-      );
+      expect(mockFetch).toHaveBeenCalledWith("/api/webhook-logs", expect.any(Object));
     });
 
     it("appends limit and offset params", async () => {

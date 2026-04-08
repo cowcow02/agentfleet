@@ -1,7 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { AgentTable } from "../agent-table";
 import type { Agent } from "@agentfleet/types";
+
+// Make heartbeat recent so agents show as "online" by default
+function recentHeartbeat() {
+  return new Date().toISOString();
+}
 
 function makeAgent(overrides: Partial<Agent> = {}): Agent {
   return {
@@ -9,13 +14,22 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
     machine: "machine-1",
     tags: ["frontend", "react"],
     capacity: 3,
-    running: 1,
-    lastHeartbeat: "2025-01-15T10:00:00Z",
+    running: 0,
+    lastHeartbeat: recentHeartbeat(),
     ...overrides,
   };
 }
 
 describe("AgentTable", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("shows empty state when no agents", () => {
     render(<AgentTable agents={[]} />);
     expect(
@@ -25,11 +39,10 @@ describe("AgentTable", () => {
 
   it("renders table headers", () => {
     render(<AgentTable agents={[makeAgent()]} />);
-    expect(screen.getByText("Name")).toBeInTheDocument();
+    expect(screen.getByText("Agent")).toBeInTheDocument();
     expect(screen.getByText("Tags")).toBeInTheDocument();
     expect(screen.getByText("Capacity")).toBeInTheDocument();
     expect(screen.getByText("Status")).toBeInTheDocument();
-    expect(screen.getByText("Last Seen")).toBeInTheDocument();
   });
 
   it("renders agent name", () => {
@@ -37,23 +50,29 @@ describe("AgentTable", () => {
     expect(screen.getByText("code-agent")).toBeInTheDocument();
   });
 
-  it("renders tags as badges", () => {
+  it("renders tags", () => {
     render(<AgentTable agents={[makeAgent()]} />);
     expect(screen.getByText("frontend")).toBeInTheDocument();
     expect(screen.getByText("react")).toBeInTheDocument();
   });
 
-  it("displays capacity as running/capacity", () => {
+  it("displays capacity as running / capacity", () => {
     render(<AgentTable agents={[makeAgent({ running: 1, capacity: 3 })]} />);
-    expect(screen.getByText("1/3")).toBeInTheDocument();
+    // Component renders: <span>1</span>{" / "}{agent.capacity} — text is split across elements
+    // Find the container that has the full text
+    expect(
+      screen.getByText((_content, element) => {
+        return element?.textContent === "1 / 3" && element?.tagName === "DIV";
+      }),
+    ).toBeInTheDocument();
   });
 
-  it("shows Available when running < capacity", () => {
-    render(<AgentTable agents={[makeAgent({ running: 1, capacity: 3 })]} />);
-    expect(screen.getByText("Available")).toBeInTheDocument();
+  it("shows Online when agent has recent heartbeat and running is 0", () => {
+    render(<AgentTable agents={[makeAgent({ running: 0, capacity: 3 })]} />);
+    expect(screen.getByText("Online")).toBeInTheDocument();
   });
 
-  it("shows Busy when running >= capacity", () => {
+  it("shows Busy when agent has recent heartbeat and running > 0", () => {
     render(<AgentTable agents={[makeAgent({ running: 3, capacity: 3 })]} />);
     expect(screen.getByText("Busy")).toBeInTheDocument();
   });

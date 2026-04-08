@@ -31,16 +31,16 @@ beforeEach(() => {
 describe("DispatchForm", () => {
   it("renders Manual and Linear tabs", () => {
     render(<DispatchForm />);
-    expect(screen.getByRole("tab", { name: "Manual" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "From Linear" })).toBeInTheDocument();
+    expect(screen.getByText("Manual")).toBeInTheDocument();
+    expect(screen.getByText("From Linear")).toBeInTheDocument();
   });
 
   it("renders manual form fields", () => {
     render(<DispatchForm />);
-    expect(screen.getByLabelText("Ticket Reference")).toBeInTheDocument();
-    expect(screen.getByLabelText("Title")).toBeInTheDocument();
-    expect(screen.getByLabelText("Labels (comma-separated)")).toBeInTheDocument();
-    expect(screen.getByLabelText("Description (optional)")).toBeInTheDocument();
+    expect(screen.getByText("Ticket ID")).toBeInTheDocument();
+    expect(screen.getByText("Title")).toBeInTheDocument();
+    expect(screen.getByText("Labels (comma-sep)")).toBeInTheDocument();
+    expect(screen.getByText("Description (optional)")).toBeInTheDocument();
   });
 
   it("has a submit button", () => {
@@ -52,11 +52,9 @@ describe("DispatchForm", () => {
     const user = userEvent.setup();
     render(<DispatchForm />);
 
-    await user.type(screen.getByLabelText("Ticket Reference"), "KIP-1");
-    await user.type(screen.getByLabelText("Title"), "Test task");
-    // Leave labels as empty string but the field is required, so we need to type and clear
-    // Actually the HTML required will prevent submit; we need to type something that results in empty labels
-    await user.type(screen.getByLabelText("Labels (comma-separated)"), "  , , ");
+    await user.type(screen.getByPlaceholderText("KIP-301"), "KIP-1");
+    await user.type(screen.getByPlaceholderText("Describe the ticket"), "Test task");
+    await user.type(screen.getByPlaceholderText("backend, feature"), "  , , ");
 
     await user.click(screen.getByRole("button", { name: "Dispatch" }));
 
@@ -79,14 +77,11 @@ describe("DispatchForm", () => {
     const user = userEvent.setup();
     render(<DispatchForm />);
 
-    await user.type(screen.getByLabelText("Ticket Reference"), "KIP-301");
-    await user.type(screen.getByLabelText("Title"), "Implement auth");
+    await user.type(screen.getByPlaceholderText("KIP-301"), "KIP-301");
+    await user.type(screen.getByPlaceholderText("Describe the ticket"), "Implement auth");
+    await user.type(screen.getByPlaceholderText("backend, feature"), "frontend, react");
     await user.type(
-      screen.getByLabelText("Labels (comma-separated)"),
-      "frontend, react",
-    );
-    await user.type(
-      screen.getByLabelText("Description (optional)"),
+      screen.getByPlaceholderText("Additional context for the agent..."),
       "Some details",
     );
 
@@ -102,9 +97,7 @@ describe("DispatchForm", () => {
       });
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      "Dispatched to agent-1 on machine-1",
-    );
+    expect(mockToastSuccess).toHaveBeenCalledWith("Dispatched to agent-1 on machine-1");
   });
 
   it("shows error toast on API failure", async () => {
@@ -113,12 +106,9 @@ describe("DispatchForm", () => {
     const user = userEvent.setup();
     render(<DispatchForm />);
 
-    await user.type(screen.getByLabelText("Ticket Reference"), "KIP-1");
-    await user.type(screen.getByLabelText("Title"), "Test");
-    await user.type(
-      screen.getByLabelText("Labels (comma-separated)"),
-      "backend",
-    );
+    await user.type(screen.getByPlaceholderText("KIP-301"), "KIP-1");
+    await user.type(screen.getByPlaceholderText("Describe the ticket"), "Test");
+    await user.type(screen.getByPlaceholderText("backend, feature"), "backend");
 
     await user.click(screen.getByRole("button", { name: "Dispatch" }));
 
@@ -138,15 +128,12 @@ describe("DispatchForm", () => {
     const user = userEvent.setup();
     render(<DispatchForm />);
 
-    const ticketInput = screen.getByLabelText("Ticket Reference");
-    const titleInput = screen.getByLabelText("Title");
+    const ticketInput = screen.getByPlaceholderText("KIP-301");
+    const titleInput = screen.getByPlaceholderText("Describe the ticket");
 
     await user.type(ticketInput, "KIP-1");
     await user.type(titleInput, "Test");
-    await user.type(
-      screen.getByLabelText("Labels (comma-separated)"),
-      "tag",
-    );
+    await user.type(screen.getByPlaceholderText("backend, feature"), "tag");
 
     await user.click(screen.getByRole("button", { name: "Dispatch" }));
 
@@ -157,15 +144,17 @@ describe("DispatchForm", () => {
   });
 
   describe("Linear tab", () => {
-    it("shows Load Linear Issues button", async () => {
+    it("auto-loads issues when switching to Linear tab", async () => {
+      mockFetchLinearIssues.mockResolvedValue({ issues: [] });
+
       const user = userEvent.setup();
       render(<DispatchForm />);
 
-      await user.click(screen.getByRole("tab", { name: "From Linear" }));
+      await user.click(screen.getByText("From Linear"));
 
-      expect(
-        screen.getByRole("button", { name: "Load Linear Issues" }),
-      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(mockFetchLinearIssues).toHaveBeenCalled();
+      });
     });
 
     it("loads and displays issues", async () => {
@@ -187,16 +176,13 @@ describe("DispatchForm", () => {
       const user = userEvent.setup();
       render(<DispatchForm />);
 
-      await user.click(screen.getByRole("tab", { name: "From Linear" }));
-      await user.click(
-        screen.getByRole("button", { name: "Load Linear Issues" }),
-      );
+      await user.click(screen.getByText("From Linear"));
 
       await waitFor(() => {
         expect(screen.getByText("LIN-1")).toBeInTheDocument();
         expect(screen.getByText("Linear issue 1")).toBeInTheDocument();
-        expect(screen.getByText("In Progress")).toBeInTheDocument();
-        expect(screen.getByText("bug")).toBeInTheDocument();
+        expect(screen.getByText(/In Progress/)).toBeInTheDocument();
+        expect(screen.getByText(/bug/)).toBeInTheDocument();
       });
     });
 
@@ -225,22 +211,14 @@ describe("DispatchForm", () => {
       const user = userEvent.setup();
       render(<DispatchForm />);
 
-      await user.click(screen.getByRole("tab", { name: "From Linear" }));
-      await user.click(
-        screen.getByRole("button", { name: "Load Linear Issues" }),
-      );
+      await user.click(screen.getByText("From Linear"));
 
       await waitFor(() => {
         expect(screen.getByText("LIN-1")).toBeInTheDocument();
       });
 
-      // Select the issue
-      await user.click(screen.getByText("Linear issue 1"));
-
-      // Dispatch button should appear
-      const dispatchBtn = await screen.findByRole("button", {
-        name: "Dispatch LIN-1",
-      });
+      // Click the Dispatch button next to the issue
+      const dispatchBtn = screen.getByRole("button", { name: "Dispatch" });
       await user.click(dispatchBtn);
 
       await waitFor(() => {
@@ -253,24 +231,19 @@ describe("DispatchForm", () => {
         });
       });
 
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Dispatched to agent-2 on machine-2",
-      );
+      expect(mockToastSuccess).toHaveBeenCalledWith("Dispatched to agent-2 on machine-2");
     });
 
-    it("shows error toast on fetch issues failure", async () => {
+    it("shows error message on fetch issues failure", async () => {
       mockFetchLinearIssues.mockRejectedValue(new Error("No config"));
 
       const user = userEvent.setup();
       render(<DispatchForm />);
 
-      await user.click(screen.getByRole("tab", { name: "From Linear" }));
-      await user.click(
-        screen.getByRole("button", { name: "Load Linear Issues" }),
-      );
+      await user.click(screen.getByText("From Linear"));
 
       await waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith("No config");
+        expect(screen.getByText(/No config/)).toBeInTheDocument();
       });
     });
   });

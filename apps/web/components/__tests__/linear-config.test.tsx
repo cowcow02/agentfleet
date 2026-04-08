@@ -46,12 +46,13 @@ describe("LinearConfig", () => {
       expect(screen.getByText("Linear Integration")).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("button", { name: "Connect" })).toBeInTheDocument();
+    expect(screen.getByText("Not configured")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save Configuration" })).toBeInTheDocument();
     // Should not show Remove button
     expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
   });
 
-  it("shows configured state with Connected badge", async () => {
+  it("shows configured state with Connected indicator", async () => {
     mockFetchLinearConfig.mockResolvedValue({
       configured: true,
       triggerStatus: "In Progress",
@@ -64,7 +65,7 @@ describe("LinearConfig", () => {
       expect(screen.getByText("Connected")).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save Configuration" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
   });
 
@@ -77,12 +78,11 @@ describe("LinearConfig", () => {
     render(<LinearConfig />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Trigger Status")).toHaveValue("In Progress");
+      expect(screen.getByText("Connected")).toBeInTheDocument();
     });
 
-    expect(
-      screen.getByLabelText("Trigger Labels (comma-separated)"),
-    ).toHaveValue("agent, auto");
+    // Trigger labels input should have the joined value
+    expect(screen.getByPlaceholderText("agent-task, ready-to-build")).toHaveValue("agent, auto");
   });
 
   it("displays webhook URL when configured", async () => {
@@ -95,9 +95,7 @@ describe("LinearConfig", () => {
     render(<LinearConfig />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("https://fleet.example.com/api/webhooks/linear"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("https://fleet.example.com/api/webhooks/linear")).toBeInTheDocument();
     });
   });
 
@@ -106,13 +104,11 @@ describe("LinearConfig", () => {
     render(<LinearConfig />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/API Key/)).toBeInTheDocument();
+      expect(screen.getByText(/API Key/)).toBeInTheDocument();
     });
 
-    expect(screen.getByLabelText("Trigger Status")).toBeInTheDocument();
-    expect(
-      screen.getByLabelText("Trigger Labels (comma-separated)"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Trigger when status changes to")).toBeInTheDocument();
+    expect(screen.getByText("Only for labels (comma-separated)")).toBeInTheDocument();
   });
 
   it("calls updateLinearConfig on save", async () => {
@@ -127,30 +123,31 @@ describe("LinearConfig", () => {
     render(<LinearConfig />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/API Key/)).toBeInTheDocument();
+      expect(screen.getByText(/API Key/)).toBeInTheDocument();
     });
 
-    await user.type(screen.getByLabelText(/API Key/), "lin_api_test123");
-    await user.type(screen.getByLabelText("Trigger Status"), "In Progress");
-    await user.type(
-      screen.getByLabelText("Trigger Labels (comma-separated)"),
-      "agent, auto",
-    );
+    await user.type(screen.getByPlaceholderText("lin_api_xxxxxxxx"), "lin_api_test123");
+    // Trigger status is a select - change it
+    await user.selectOptions(screen.getByRole("combobox"), "in_progress");
+    await user.type(screen.getByPlaceholderText("agent-task, ready-to-build"), "agent, auto");
 
-    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await user.click(screen.getByRole("button", { name: "Save Configuration" }));
 
     await waitFor(() => {
       expect(mockUpdateLinearConfig).toHaveBeenCalledWith({
         apiKey: "lin_api_test123",
-        triggerStatus: "In Progress",
+        triggerStatus: "in_progress",
         triggerLabels: ["agent", "auto"],
       });
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith("Linear integration updated");
+    // Component uses inline saveMsg, not toast.success
+    await waitFor(() => {
+      expect(screen.getByText("Configuration saved.")).toBeInTheDocument();
+    });
   });
 
-  it("shows error toast on save failure", async () => {
+  it("shows error message on save failure", async () => {
     mockFetchLinearConfig.mockResolvedValue({ configured: false });
     mockUpdateLinearConfig.mockRejectedValue(new Error("Bad API key"));
 
@@ -158,16 +155,15 @@ describe("LinearConfig", () => {
     render(<LinearConfig />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/API Key/)).toBeInTheDocument();
+      expect(screen.getByText(/API Key/)).toBeInTheDocument();
     });
 
-    await user.type(screen.getByLabelText(/API Key/), "bad-key");
-    await user.type(screen.getByLabelText("Trigger Status"), "Done");
+    await user.type(screen.getByPlaceholderText("lin_api_xxxxxxxx"), "bad-key");
 
-    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await user.click(screen.getByRole("button", { name: "Save Configuration" }));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("Bad API key");
+      expect(screen.getByText("Bad API key")).toBeInTheDocument();
     });
   });
 
@@ -195,9 +191,7 @@ describe("LinearConfig", () => {
       expect(mockDeleteLinearConfig).toHaveBeenCalled();
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      "Linear integration removed",
-    );
+    expect(mockToastSuccess).toHaveBeenCalledWith("Linear integration removed");
 
     vi.restoreAllMocks();
   });

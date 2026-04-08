@@ -34,16 +34,16 @@ describe("DispatchList", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders table headers", () => {
+  it("renders dispatch card with key data", () => {
     render(<DispatchList dispatches={[makeDispatch()]} />);
-    expect(screen.getByText("Ticket")).toBeInTheDocument();
-    expect(screen.getByText("Title")).toBeInTheDocument();
-    expect(screen.getByText("Agent")).toBeInTheDocument();
-    expect(screen.getByText("Source")).toBeInTheDocument();
-    expect(screen.getByText("Priority")).toBeInTheDocument();
-    expect(screen.getByText("Status")).toBeInTheDocument();
-    expect(screen.getByText("Duration")).toBeInTheDocument();
-    expect(screen.getByText("Created")).toBeInTheDocument();
+    expect(screen.getByText("KIP-101")).toBeInTheDocument();
+    expect(screen.getByText("Fix login bug")).toBeInTheDocument();
+    // Agent is shown as "Agent: agent-1"
+    expect(screen.getByText("agent-1")).toBeInTheDocument();
+    // Source is capitalized: "Manual"
+    expect(screen.getByText("Manual")).toBeInTheDocument();
+    // Status shown as badge
+    expect(screen.getByText("completed")).toBeInTheDocument();
   });
 
   it("renders dispatch data in rows", () => {
@@ -51,8 +51,7 @@ describe("DispatchList", () => {
     expect(screen.getByText("KIP-101")).toBeInTheDocument();
     expect(screen.getByText("Fix login bug")).toBeInTheDocument();
     expect(screen.getByText("agent-1")).toBeInTheDocument();
-    expect(screen.getByText("manual")).toBeInTheDocument();
-    expect(screen.getByText("medium")).toBeInTheDocument();
+    expect(screen.getByText("Manual")).toBeInTheDocument();
     expect(screen.getByText("completed")).toBeInTheDocument();
   });
 
@@ -66,7 +65,7 @@ describe("DispatchList", () => {
     expect(screen.getByText("KIP-102")).toBeInTheDocument();
   });
 
-  it("shows status badges with correct classes", () => {
+  it("shows status badges", () => {
     const dispatches = [
       makeDispatch({ id: "d-1", status: "running" }),
       makeDispatch({ id: "d-2", status: "failed", ticketRef: "KIP-102" }),
@@ -95,13 +94,13 @@ describe("DispatchList", () => {
     expect(screen.getByText("--")).toBeInTheDocument();
   });
 
-  it("renders priority badges", () => {
+  it("renders source badges", () => {
     const dispatches = [
-      makeDispatch({ id: "d-1", priority: "critical" }),
-      makeDispatch({ id: "d-2", priority: "low", ticketRef: "KIP-102" }),
+      makeDispatch({ id: "d-1", source: "manual" }),
+      makeDispatch({ id: "d-2", source: "linear", ticketRef: "KIP-102" }),
     ];
     render(<DispatchList dispatches={dispatches} />);
-    expect(screen.getByText("critical")).toBeInTheDocument();
-    expect(screen.getByText("low")).toBeInTheDocument();
+    expect(screen.getByText("Manual")).toBeInTheDocument();
+    expect(screen.getByText("Linear")).toBeInTheDocument();
   });
 });

@@ -38,10 +38,7 @@ describe("auth-client", () => {
       mockFetch.mockResolvedValue(jsonResponse([{ id: "k1", name: "test" }]));
       const result = await apiKey.listApiKeys();
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/auth/api-key/list",
-        { credentials: "include" },
-      );
+      expect(mockFetch).toHaveBeenCalledWith("/api/auth/api-key/list", { credentials: "include" });
       expect(result.data).toEqual([{ id: "k1", name: "test" }]);
       expect(result.error).toBeNull();
     });
@@ -62,15 +59,12 @@ describe("auth-client", () => {
 
       const result = await apiKey.createApiKey({ name: "new-key" });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/auth/api-key/create",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "new-key" }),
-        },
-      );
+      expect(mockFetch).toHaveBeenCalledWith("/api/auth/api-key/create", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "new-key" }),
+      });
       expect(result.data).toEqual(created);
       expect(result.error).toBeNull();
     });
@@ -98,15 +92,12 @@ describe("auth-client", () => {
 
       const result = await apiKey.deleteApiKey({ keyId: "k1" });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:9900/api/auth/api-key/delete",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ keyId: "k1" }),
-        },
-      );
+      expect(mockFetch).toHaveBeenCalledWith("/api/auth/api-key/delete", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyId: "k1" }),
+      });
       expect(result.data).toEqual({ success: true });
       expect(result.error).toBeNull();
     });

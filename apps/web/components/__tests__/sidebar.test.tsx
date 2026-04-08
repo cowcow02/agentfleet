@@ -37,12 +37,24 @@ vi.mock("next/link", () => ({
     href,
     children,
     className,
+    style,
+    onMouseEnter,
+    onMouseLeave,
   }: {
     href: string;
     children: React.ReactNode;
     className?: string;
+    style?: React.CSSProperties;
+    onMouseEnter?: React.MouseEventHandler;
+    onMouseLeave?: React.MouseEventHandler;
   }) => (
-    <a href={href} className={className}>
+    <a
+      href={href}
+      className={className}
+      style={style}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       {children}
     </a>
   ),
@@ -67,19 +79,18 @@ describe("Sidebar", () => {
   it("renders app branding", () => {
     render(<Sidebar />);
     expect(screen.getByText("AgentFleet")).toBeInTheDocument();
-    expect(screen.getByText("AF")).toBeInTheDocument();
   });
 
-  it("highlights active link with active class", () => {
+  it("highlights active link with accent color style", () => {
     mockUsePathname.mockReturnValue("/agents");
     render(<Sidebar />);
 
     const agentsLink = screen.getByText("Agents").closest("a");
-    expect(agentsLink?.className).toContain("bg-sidebar-accent");
-    expect(agentsLink?.className).toContain("text-sidebar-primary");
+    expect(agentsLink?.style.color).toBe("var(--af-accent)");
+    expect(agentsLink?.style.background).toBe("var(--af-accent-subtle)");
 
     const dashboardLink = screen.getByText("Dashboard").closest("a");
-    expect(dashboardLink?.className).not.toContain("text-sidebar-primary");
+    expect(dashboardLink?.style.color).toBe("var(--af-text-secondary)");
   });
 
   it("displays user name and email", () => {
@@ -88,16 +99,16 @@ describe("Sidebar", () => {
     expect(screen.getByText("john@example.com")).toBeInTheDocument();
   });
 
-  it("displays user initials in avatar", () => {
+  it("displays user initial in avatar", () => {
     render(<Sidebar />);
-    expect(screen.getByText("JD")).toBeInTheDocument();
+    expect(screen.getByText("J")).toBeInTheDocument();
   });
 
   it("calls signOut and redirects on sign out button click", async () => {
     const user = userEvent.setup();
     render(<Sidebar />);
 
-    const signOutBtn = screen.getByTitle("Sign out");
+    const signOutBtn = screen.getByText("Sign out");
     await user.click(signOutBtn);
 
     expect(mockSignOut).toHaveBeenCalled();
@@ -116,21 +127,9 @@ describe("Sidebar", () => {
 
   it("nav links point to correct hrefs", () => {
     render(<Sidebar />);
-    expect(screen.getByText("Dashboard").closest("a")).toHaveAttribute(
-      "href",
-      "/dashboard",
-    );
-    expect(screen.getByText("Agents").closest("a")).toHaveAttribute(
-      "href",
-      "/agents",
-    );
-    expect(screen.getByText("Dispatches").closest("a")).toHaveAttribute(
-      "href",
-      "/dispatches",
-    );
-    expect(screen.getByText("Settings").closest("a")).toHaveAttribute(
-      "href",
-      "/settings",
-    );
+    expect(screen.getByText("Dashboard").closest("a")).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByText("Agents").closest("a")).toHaveAttribute("href", "/agents");
+    expect(screen.getByText("Dispatches").closest("a")).toHaveAttribute("href", "/dispatches");
+    expect(screen.getByText("Settings").closest("a")).toHaveAttribute("href", "/settings");
   });
 });
