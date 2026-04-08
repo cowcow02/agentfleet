@@ -218,9 +218,9 @@ export const dispatches = pgTable("dispatches", {
   priority: text("priority", { enum: ["low", "medium", "high", "critical"] }).notNull().default("medium"),
   agentName: text("agent_name").notNull(),
   machineName: text("machine_name").notNull(),
-  memberId: text("member_id").references(() => user.id),
+  createdBy: text("created_by").references(() => user.id),
   source: text("source", { enum: ["manual", "linear"] }).notNull().default("manual"),
-  status: text("status", { enum: ["pending", "dispatched", "running", "completed", "failed"] }).notNull().default("pending"),
+  status: text("status", { enum: ["dispatched", "running", "completed", "failed"] }).notNull().default("dispatched"),
   exitCode: integer("exit_code"),
   durationMs: integer("duration_ms"),
   messages: jsonb("messages").$type<{ message: string; timestamp: string }[]>().default([]),
@@ -290,37 +290,70 @@ POST /api/auth/api-key/delete       Revoke API key
 
 ### Application Routes (Hono)
 
-All require authentication (session cookie or API key).
+All routes under `/api/*` require authentication (session cookie or API key), **except**:
+- `/api/auth/**` — handled by Better Auth
+- `/api/webhooks/**` — incoming webhook endpoints (unauthenticated, validated by payload signature)
+- `/health` — health check (outside `/api/` prefix)
+
+The auth middleware must explicitly skip these paths.
+
+#### Dashboard
+
+```
+GET    /api/dashboard/stats         Aggregate view for the dashboard
+                                    Response: {
+                                      machinesOnline: number,
+                                      agentsRegistered: number,
+                                      runningJobs: number,
+                                      totalDispatches: number,
+                                      completed: number,
+                                      failed: number,
+                                      avgDurationSeconds: number,
+                                      totalAgentSeconds: number
+                                    }
+                                    Note: machinesOnline, agentsRegistered, runningJobs come from
+                                    in-memory state. The rest are DB aggregates from dispatches.
+```
 
 #### Dispatches
 
 ```
 GET    /api/dispatches              List dispatches for active org
                                     Query: ?status=, ?source=, ?agent=, ?limit=, ?offset=
+                                    Response: { dispatches: Dispatch[], total: number }
 POST   /api/dispatches              Create manual dispatch
-                                    Body: { ticketRef, title, description?, labels, priority? }
+                                    Body: { ticketRef, title, description?, labels (required), priority? }
+                                    Response: { id, agentName, machineName, status }
+                                    Note: labels is required — agent matching scores by label/tag overlap.
+                                    A dispatch with empty labels will fail (no agent can match).
 GET    /api/dispatches/:id          Get single dispatch with messages
-GET    /api/dispatches/stats        Aggregate metrics: total, completed, failed, running, avg duration
+                                    Response: Dispatch (full, including messages array)
 ```
 
 #### Agents
 
 ```
 GET    /api/agents                  List connected agents for active org
-                                    Returns: name, machine, tags, capacity, running count, last heartbeat
+                                    Response: { agents: Agent[], machinesOnline: number }
+                                    Each agent: { name, machine, tags, capacity, running, lastHeartbeat }
 ```
 
 #### Integrations
 
 ```
-GET    /api/integrations/linear             Get Linear config (masked API key)
+GET    /api/integrations/linear             Get Linear config (API key masked)
+                                            Response: { configured: boolean, triggerStatus?, triggerLabels?, webhookUrl }
 PUT    /api/integrations/linear             Create or update Linear config
                                             Body: { apiKey, triggerStatus, triggerLabels }
 DELETE /api/integrations/linear             Remove Linear config
+                                            Behavior: deletes the integration row. Does not delete webhook_logs.
+                                            Existing Linear webhooks pointing to the old URL will receive 404s
+                                            until reconfigured. No cleanup of external Linear webhook config.
 GET    /api/integrations/linear/issues      Proxy: fetch open issues from Linear GraphQL API
+                                            Response: { issues: LinearIssue[] }
 ```
 
-#### Webhooks (incoming, unauthenticated)
+#### Webhooks (incoming, unauthenticated — excluded from auth middleware)
 
 ```
 POST   /api/webhooks/linear/:orgId  Receive Linear webhook events
@@ -332,24 +365,52 @@ POST   /api/webhooks/linear/:orgId  Receive Linear webhook events
 ```
 GET    /api/webhook-logs            List webhook events for active org
                                     Query: ?limit=, ?offset=
+                                    Response: { logs: WebhookLogEntry[], total: number }
 ```
 
 #### Real-time
 
 ```
 GET    /api/sse                     Server-Sent Events stream
+                                    Requires auth: session cookie validated on connection.
+                                    Events scoped to user's active organization via session.activeOrganizationId.
                                     Events: agent:update, dispatch:update, feed:event
 ```
 
 #### Health
 
 ```
-GET    /health                      Returns uptime, version, db status
+GET    /health                      Returns uptime, version, db status (unauthenticated)
 ```
+
+### Member Management
+
+Member listing, invitation, removal, and role management are handled entirely by Better Auth's organization plugin. The relevant endpoints are:
+
+```
+Better Auth org endpoints (automatic):
+  GET    /api/auth/organization/members     List members of active org
+  POST   /api/auth/organization/invite      Invite member by email
+  POST   /api/auth/organization/accept      Accept invitation
+  POST   /api/auth/organization/reject      Reject invitation
+  DELETE /api/auth/organization/remove-member  Remove member (admin/owner only)
+```
+
+When a member is removed via Better Auth, the API server listens for the removal event and disconnects any active WebSocket connections associated with that member's API keys.
+
+### Error Response Format
+
+All error responses use a consistent shape defined in `packages/types`:
+
+```typescript
+{ error: string, code?: string }
+```
+
+HTTP status codes: 200, 201 (created), 400 (bad input), 401 (auth), 403 (permission), 404 (not found), 409 (conflict), 422 (validation).
 
 ## WebSocket Protocol
 
-Unchanged from current implementation. Daemons connect and authenticate with API keys.
+The WebSocket protocol changes slightly from the current implementation. The CLI will need a corresponding update as part of this rewrite.
 
 ### Connection
 
@@ -358,12 +419,14 @@ WS /ws
 Authorization: Bearer <apiKey>
 ```
 
-API key verified via Better Auth's `apiKey.verify()` during upgrade. Returns organization context for scoping.
+API key verified via Better Auth's `apiKey.verify()` during HTTP upgrade. Returns organization context for scoping. The current prototype authenticates via a `token` field inside the first `register` message — this moves to the HTTP header for cleaner separation of auth and application concerns.
+
+**CLI update required:** The CLI must send the API key in the `Authorization` header during WebSocket upgrade instead of in the `register` message body. The `register` message no longer includes a `token` field.
 
 ### Messages (daemon → hub)
 
 ```typescript
-// Register machine + agents
+// Register machine + agents (token field removed — auth is in WS upgrade header)
 { type: "register", machine: string, agents: Agent[] }
 
 // Heartbeat (every 5s)
@@ -372,8 +435,8 @@ API key verified via Better Auth's `apiKey.verify()` during upgrade. Returns org
 // Status update during job
 { type: "status", dispatch_id: string, timestamp: string, message: string }
 
-// Job complete
-{ type: "complete", dispatch_id: string, success: boolean, exit_code: number, duration_ms: number }
+// Job complete — uses duration_seconds for backward compat with CLI
+{ type: "complete", dispatch_id: string, success: boolean, exit_code: number, duration_seconds: number }
 ```
 
 ### Messages (hub → daemon)
@@ -392,9 +455,13 @@ API key verified via Better Auth's `apiKey.verify()` during upgrade. Returns org
 { type: "ack", dispatch_id: string }
 ```
 
+### Duration Field Convention
+
+The WebSocket `complete` message uses `duration_seconds` (matching the current CLI). The API server converts to milliseconds before storing as `duration_ms` in the database (`duration_seconds * 1000`). The REST API returns `durationMs` to the frontend. This keeps the daemon protocol simple (whole seconds are sufficient for job timing) while the DB stores with higher precision for future use.
+
 ## SSE Events
 
-The Hono backend maintains an in-memory event bus. When machine state, dispatches, or agents change, events are pushed to all connected SSE clients scoped to their organization.
+The Hono backend maintains an in-memory event bus. The `GET /api/sse` endpoint validates the session cookie on connection (same auth middleware as other `/api/*` routes), then reads `session.activeOrganizationId` to scope events. When machine state, dispatches, or agents change, events are pushed to all connected SSE clients for that organization.
 
 ```typescript
 // Agent connected/disconnected/updated
@@ -469,16 +536,17 @@ interface Agent {
 }
 ```
 
-Stale connection cleanup runs every 15s (same as current).
+Stale connection cleanup runs every 15s. A machine is considered stale if its WebSocket is disconnected (readyState !== OPEN) or no heartbeat has been received for 60 seconds. Stale machines are removed from the map and their agents are no longer eligible for dispatch.
 
 ## Migration Strategy
 
 1. Build the new stack alongside the current `hub/` directory
 2. New apps in `apps/web/` and `apps/api/`, new packages in `packages/`
 3. Current `hub/` remains as reference during development
-4. CLI (`cli/`) unchanged — it connects via WebSocket which has the same protocol
+4. CLI (`cli/`) updated for new WS auth (header-based API key)
 5. On Railway: deploy new services, point domain to new frontend, retire old service
 6. Database: Drizzle migrations create new tables. Better Auth tables are auto-generated. Old tables from prototype can coexist or be dropped after validation.
+7. Linear webhook URL changes from `/webhooks/linear/:teamId` to `/api/webhooks/linear/:orgId`. After deploying the new API, update the webhook URL in Linear's API settings to point to the new path. The old path will 404 on the new server.
 
 ## Dependencies
 
@@ -498,16 +566,25 @@ Stale connection cleanup runs every 15s (same as current).
 
 ### packages/db
 - drizzle-orm, drizzle-kit
-- pg (PostgreSQL driver)
+- pg (PostgreSQL driver, via `drizzle-orm/node-postgres` adapter)
 - better-auth (adapter)
 
 ### packages/types
 - zod
 
+## What Changes in the CLI
+
+The CLI (`cli/`) requires a minor update:
+- **WebSocket auth**: Move API key from `register` message body to `Authorization` header during WS upgrade
+- **API key format**: Use Better Auth-generated API keys instead of `afm_*` tokens
+
+The CLI's core behavior (register, heartbeat, status, complete) and WebSocket message shapes are otherwise unchanged.
+
 ## What Is NOT Changing
 
-- CLI tool — same WebSocket protocol, same API key auth
 - Agent matching algorithm — same tag-based scoring
 - Linear webhook processing logic — same trigger rules
 - Deployment platform — Railway (or any platform)
 - In-memory machine/agent state model — ephemeral by design
+- WebSocket message types and payloads (except `register` dropping the `token` field)
+- Duration reported by daemons in seconds
