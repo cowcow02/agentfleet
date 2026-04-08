@@ -429,8 +429,7 @@ const httpServer = http.createServer(async (req, res) => {
     team.members.set(memberId, admin);
     teams.set(teamId, team);
     membersByToken.set(adminToken, { member: admin, team });
-    db.saveTeam(team).catch(() => {});
-    db.saveMember(admin).catch(() => {});
+    db.saveTeam(team).then(() => db.saveMember(admin)).catch(() => {});
 
     log(`Team "${team.name}" created (id: ${teamId})`);
 
@@ -563,8 +562,7 @@ const httpServer = http.createServer(async (req, res) => {
     teams.set(teamId, team);
     membersByToken.set(apiToken, { member, team });
     membersByEmail.set(member.email, { member, team });
-    db.saveTeam(team).catch(() => {});
-    db.saveMember(member).catch(() => {});
+    db.saveTeam(team).then(() => db.saveMember(member)).catch(() => {});
 
     const sessionToken = createSessionToken(memberId, teamId);
 
