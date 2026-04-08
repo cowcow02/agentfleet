@@ -1,0 +1,15 @@
+{
+  "name": "agentfleet-hub",
+  "version": "0.2.0",
+  "description": "AgentFleet Hub — multi-tenant agent discovery and dispatch",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

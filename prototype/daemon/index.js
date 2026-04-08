@@ -18,9 +18,18 @@ function resolveManifestPath() {
 }
 const manifestPath = resolveManifestPath();
 const manifest = yaml.load(fs.readFileSync(manifestPath, 'utf8'));
-const HUB_URL = process.env.AGENTFLEET_HUB || manifest.hub || 'ws://localhost:9900';
-const TOKEN = process.env.AGENTFLEET_TOKEN || manifest.token || '';
-const MACHINE_NAME = manifest.machine_name || 'unknown';
+// Also try reading ~/.agentfleet/config.yaml for hub, token, machine_name
+let configData = {};
+try {
+  const configPath = path.join(os.homedir(), '.agentfleet', 'config.yaml');
+  if (fs.existsSync(configPath)) {
+    configData = yaml.load(fs.readFileSync(configPath, 'utf8')) || {};
+  }
+} catch (_) {}
+
+const HUB_URL = process.env.AGENTFLEET_HUB || manifest.hub || configData.hub || 'ws://localhost:9900';
+const TOKEN = process.env.AGENTFLEET_TOKEN || manifest.token || configData.token || '';
+const MACHINE_NAME = manifest.machine_name || configData.machine_name || os.hostname();
 const agents = manifest.agents || [];
 
 // --- Logging ---

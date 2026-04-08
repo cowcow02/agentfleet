@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — AgentFleet</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #161922; --surface-hover: #1c1f2e; --surface-elevated: #1e2235;
+    --border: #262b3d; --border-subtle: #1f2335;
+    --text: #e1e4ed; --text-secondary: #8b90a0; --text-tertiary: #5c6070;
+    --accent: #7c6cf0; --accent-hover: #8d7ff5; --accent-subtle: rgba(124, 108, 240, 0.12);
+    --success: #3ecf8e; --success-subtle: rgba(62, 207, 142, 0.12);
+    --warning: #f0b429; --warning-subtle: rgba(240, 180, 41, 0.12);
+    --danger: #e5484d; --danger-subtle: rgba(229, 72, 77, 0.12);
+    --info: #5b9bf0; --info-subtle: rgba(91, 155, 240, 0.12);
+    --sidebar-width: 220px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+  /* Sidebar */
+  .sidebar { position: fixed; top: 0; left: 0; width: var(--sidebar-width); height: 100vh; background: var(--surface); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; z-index: 100; }
+  .sidebar-brand { padding: 24px 20px 20px; display: flex; align-items: center; gap: 10px; }
+  .sidebar-brand svg { width: 20px; height: 20px; color: var(--accent); flex-shrink: 0; }
+  .sidebar-brand-text { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .sidebar-nav { flex: 1; padding: 4px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .sidebar-nav a { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+  .sidebar-nav a:hover { background: var(--surface-hover); color: var(--text); }
+  .sidebar-nav a.active { background: var(--accent-subtle); color: var(--accent); }
+  .sidebar-nav a svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.7; }
+  .sidebar-nav a.active svg { opacity: 1; }
+  .sidebar-footer { padding: 16px; border-top: 1px solid var(--border-subtle); }
+  .sidebar-user { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .sidebar-avatar { width: 32px; height: 32px; border-radius: 8px; background: var(--accent-subtle); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .sidebar-user-info { overflow: hidden; }
+  .sidebar-user-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-user-team { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-logout { display: block; width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text-secondary); padding: 7px 0; font-family: inherit; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.15s; text-align: center; }
+  .sidebar-logout:hover { color: var(--danger); border-color: var(--danger-subtle); }
+
+  /* Main */
+  .main { margin-left: var(--sidebar-width); padding: 32px 40px; min-height: 100vh; max-width: calc(var(--sidebar-width) + 860px); }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 32px; }
+
+  /* Sections */
+  .section { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px; margin-bottom: 24px; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }
+  .section-header { padding: 18px 24px; border-bottom: 1px solid var(--border-subtle); font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .section-body { padding: 24px; }
+
+  /* Forms */
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+  input, select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 14px; font-family: inherit; transition: border-color 0.15s; outline: none; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+  input::placeholder { color: var(--text-tertiary); }
+  select { cursor: pointer; }
+
+  .btn-primary { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 10px 20px; font-family: inherit; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124, 108, 240, 0.25); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-sm { background: var(--bg); border: 1px solid var(--border); color: var(--text-secondary); padding: 5px 10px; font-size: 11px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.15s; white-space: nowrap; }
+  .btn-sm:hover { color: var(--text); border-color: var(--text-tertiary); }
+  .btn-danger-sm { background: transparent; border: 1px solid var(--danger-subtle); color: var(--danger); padding: 5px 10px; font-size: 11px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; opacity: 0.7; transition: all 0.15s; }
+  .btn-danger-sm:hover { opacity: 1; }
+
+  /* Team info */
+  .team-info-row { display: flex; gap: 48px; flex-wrap: wrap; }
+  .team-info-item { display: flex; flex-direction: column; gap: 4px; }
+  .team-info-item .label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); }
+  .team-info-item .value { font-size: 15px; font-weight: 600; }
+  .team-info-item .value.dim { color: var(--text-secondary); font-weight: 400; font-family: 'SF Mono', monospace; font-size: 13px; }
+
+  /* Members table */
+  .members-table { width: 100%; border-collapse: collapse; }
+  .members-table th { text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); border-bottom: 1px solid var(--border-subtle); }
+  .members-table td { padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; vertical-align: middle; }
+  .members-table tr:last-child td { border-bottom: none; }
+  .members-table tr:hover td { background: var(--surface-hover); }
+  .role-badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 100px; }
+  .role-badge.admin { background: var(--accent-subtle); color: var(--accent); }
+  .role-badge.member { background: var(--info-subtle); color: var(--info); }
+  .token-cell { display: flex; align-items: center; gap: 8px; }
+  .token-value { color: var(--text-tertiary); font-family: 'SF Mono', monospace; font-size: 12px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .toggle-link { background: transparent; border: none; color: var(--accent); font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; padding: 0; transition: color 0.15s; }
+  .toggle-link:hover { color: var(--accent-hover); }
+
+  /* Add member */
+  .add-member-form { display: none; border-top: 1px solid var(--border-subtle); padding: 24px; }
+  .add-member-form.open { display: block; }
+  .add-member-form h4 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .add-member-row { display: grid; grid-template-columns: 1fr 1fr 140px auto; gap: 12px; align-items: end; }
+  .new-token-display { background: var(--success-subtle); border: 1px solid rgba(62,207,142,0.25); border-radius: 10px; padding: 16px 20px; margin-top: 16px; display: none; }
+  .new-token-display.show { display: block; }
+  .new-token-display .msg { color: var(--success); font-size: 13px; margin-bottom: 10px; font-weight: 600; }
+  .new-token-value { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; font-family: 'SF Mono', monospace; font-size: 13px; color: var(--warning); font-weight: 600; display: flex; justify-content: space-between; align-items: center; word-break: break-all; gap: 10px; }
+
+  /* Linear */
+  .linear-status { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 13px; }
+  .status-dot-lg { width: 8px; height: 8px; border-radius: 50%; }
+  .status-dot-lg.connected { background: var(--success); box-shadow: 0 0 0 3px var(--success-subtle); }
+  .status-dot-lg.disconnected { background: var(--text-tertiary); }
+  .linear-form { display: flex; flex-direction: column; gap: 16px; }
+  .linear-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .webhook-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-top: 4px; }
+  .webhook-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; }
+  .webhook-url { font-family: 'SF Mono', monospace; font-size: 13px; color: var(--info); word-break: break-all; flex: 1; }
+  .save-msg { font-size: 13px; margin-left: 16px; display: none; font-weight: 500; }
+  .save-msg.success { color: var(--success); display: inline; }
+  .save-msg.error { color: var(--danger); display: inline; }
+
+  /* Invite */
+  .invite-row { display: grid; grid-template-columns: 1fr 120px auto; gap: 12px; align-items: end; }
+  .invite-result { display: none; margin-top: 16px; }
+  .invite-result.show { display: block; }
+  .invite-result-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .invite-link-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .invite-link-box span { font-family: 'SF Mono', monospace; font-size: 13px; color: var(--info); word-break: break-all; flex: 1; }
+
+  /* Daemon setup */
+  .code-block { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; font-family: 'SF Mono', monospace; font-size: 13px; color: var(--success); margin-bottom: 10px; line-height: 1.8; }
+  .code-block .key { color: var(--info); }
+  .code-block .val { color: var(--warning); }
+  .setup-step { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+  .setup-step .step-num { color: var(--accent); font-weight: 600; margin-right: 4px; }
+  .setup-note { font-size: 12px; color: var(--text-tertiary); margin-top: 8px; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg><span class="sidebar-brand-text">AgentFleet</span></div>
+  <nav class="sidebar-nav">
+    <a href="/dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a href="/agents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>Agents</a>
+    <a href="/dispatches"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Dispatches</a>
+    <a href="/settings" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="sidebar-avatar" id="user-avatar"></div><div class="sidebar-user-info"><div class="sidebar-user-name" id="user-name"></div><div class="sidebar-user-team" id="user-team"></div></div></div>
+    <button onclick="logout()" class="sidebar-logout">Sign out</button>
+  </div>
+</aside>
+
+<div class="main">
+  <h1 class="page-title">Team Settings</h1>
+
+  <!-- Team Info -->
+  <div class="section">
+    <div class="section-header">Team Info</div>
+    <div class="section-body">
+      <div class="team-info-row">
+        <div class="team-info-item"><span class="label">Team</span><span class="value" id="ti-name">&mdash;</span></div>
+        <div class="team-info-item"><span class="label">Slug</span><span class="value dim" id="ti-slug">&mdash;</span></div>
+        <div class="team-info-item"><span class="label">ID</span><span class="value dim" id="ti-id">&mdash;</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Members -->
+  <div class="section">
+    <div class="section-header">Members &amp; Tokens <button class="toggle-link" onclick="toggleAddMember()">+ Add Member</button></div>
+    <div class="section-body" style="padding: 0;">
+      <table class="members-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Token</th><th></th></tr></thead>
+        <tbody id="members-body"><tr><td colspan="5" style="text-align: center; padding: 28px; color: var(--text-tertiary);">Loading...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="add-member-form" id="add-member-form">
+      <h4>Add New Member</h4>
+      <div class="add-member-row">
+        <div class="form-group"><label>Name</label><input type="text" id="new-name" placeholder="Jane Doe"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="new-email" placeholder="jane@team.com"></div>
+        <div class="form-group"><label>Role</label><select id="new-role"><option value="member">Member</option><option value="admin">Admin</option></select></div>
+        <button class="btn-primary" onclick="addMember()" id="add-member-btn">Create</button>
+      </div>
+      <div class="new-token-display" id="new-member-token">
+        <div class="msg" id="new-member-msg"></div>
+        <div class="new-token-value"><span id="new-member-token-value"></span><button class="btn-sm" onclick="copyText(document.getElementById('new-member-token-value').textContent)">Copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invite Members -->
+  <div class="section">
+    <div class="section-header">Invite Members</div>
+    <div class="section-body">
+      <div class="invite-row">
+        <div class="form-group"><label>Email (optional)</label><input type="email" id="invite-email" placeholder="teammate@team.com"></div>
+        <div class="form-group"><label>Role</label><select id="invite-role"><option value="member">Member</option><option value="admin">Admin</option></select></div>
+        <button class="btn-primary" onclick="generateInvite()" id="invite-btn">Generate Invite Link</button>
+      </div>
+      <div class="invite-result" id="invite-result">
+        <div class="invite-result-label">Share this link with your teammate:</div>
+        <div class="invite-link-box"><span id="invite-link"></span><button class="btn-sm" onclick="copyText(document.getElementById('invite-link').textContent)">Copy</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Linear Integration -->
+  <div class="section">
+    <div class="section-header">Linear Integration</div>
+    <div class="section-body">
+      <div class="linear-status"><div class="status-dot-lg" id="linear-dot"></div><span id="linear-status-text">Checking...</span></div>
+      <div class="linear-form">
+        <div class="linear-form-row">
+          <div class="form-group"><label>API Key</label><input type="password" id="linear-api-key" placeholder="lin_api_xxxxxxxx"></div>
+          <div class="form-group"><label>Trigger when status changes to</label><select id="linear-trigger-status"><option value="backlog">Backlog</option><option value="todo" selected>Todo</option><option value="in_progress">In Progress</option><option value="in_review">In Review</option></select></div>
+        </div>
+        <div class="form-group"><label>Only for labels (comma-separated)</label><input type="text" id="linear-labels" placeholder="agent-task, ready-to-build"></div>
+        <div class="webhook-label">Webhook URL (configure in Linear):</div>
+        <div class="webhook-box"><span class="webhook-url" id="webhook-url"></span><button class="btn-sm" onclick="copyText(document.getElementById('webhook-url').textContent)">Copy</button></div>
+        <div style="margin-top: 18px; display: flex; align-items: center;"><button class="btn-primary" onclick="saveLinear()" id="save-linear-btn">Save Configuration</button><span class="save-msg" id="linear-save-msg"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daemon Setup -->
+  <div class="section">
+    <div class="section-header">Daemon Setup</div>
+    <div class="section-body">
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 18px;">Install and connect from any machine:</p>
+      <div class="setup-step"><span class="step-num">1.</span> Get your token from the Members table above</div>
+      <div class="setup-step" style="margin-bottom: 12px;"><span class="step-num">2.</span> Configure daemon: edit <span style="color: var(--info); font-family: 'SF Mono', monospace; font-size: 13px;">~/.agentfleet/agents.yaml</span></div>
+      <div class="code-block"><span class="key">hub:</span> <span class="val" id="daemon-hub-url"></span><br><span class="key">token:</span> <span class="val">&lt;your-token&gt;</span></div>
+      <div class="setup-step" style="margin-top: 14px; margin-bottom: 12px;"><span class="step-num">3.</span> Start the daemon:</div>
+      <div class="code-block"><span style="color: var(--text-tertiary);">$</span> node daemon/index.js</div>
+      <p class="setup-note">The daemon will automatically register your agents with this hub and start accepting dispatches.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOKEN = localStorage.getItem('agentfleet_session') || localStorage.getItem('agentfleet_token');
+const HUB = window.location.origin;
+if (!TOKEN) { window.location.href = '/'; }
+
+async function api(path, options = {}) {
+  const res = await fetch(`${HUB}${path}`, { ...options, headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json', ...options.headers } });
+  return res.json();
+}
+function logout() { localStorage.removeItem('agentfleet_session'); localStorage.removeItem('agentfleet_token'); window.location.href = '/'; }
+function escHtml(s) { if (!s) return ''; const div = document.createElement('div'); div.textContent = s; return div.innerHTML; }
+function copyText(text) { navigator.clipboard.writeText(text).then(() => {}); }
+
+let teamId = '';
+api('/api/me').then(data => {
+  if (data.error) { logout(); return; }
+  const name = data.member?.name || ''; const team = data.team?.name || '';
+  document.getElementById('user-name').textContent = name;
+  document.getElementById('user-team').textContent = team;
+  document.getElementById('user-avatar').textContent = name ? name.charAt(0).toUpperCase() : '?';
+  teamId = data.team?.id || '';
+  document.getElementById('ti-name').textContent = data.team?.name || '\u2014';
+  document.getElementById('ti-slug').textContent = data.team?.slug || '\u2014';
+  document.getElementById('ti-id').textContent = teamId || '\u2014';
+  document.getElementById('webhook-url').textContent = HUB + '/webhooks/linear/' + teamId;
+  document.getElementById('daemon-hub-url').textContent = HUB.replace('http', 'ws') + '/';
+}).catch(() => {});
+
+function maskToken(token) { if (!token) return '\u2014'; if (token.length <= 10) return token; return token.substring(0, 8) + '\u2026' + token.substring(token.length - 4); }
+
+async function loadMembers() {
+  try {
+    const data = await api('/api/members');
+    const members = data.members || [];
+    const tbody = document.getElementById('members-body');
+    if (members.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 28px; color: var(--text-tertiary);">No members found.</td></tr>'; return; }
+    tbody.innerHTML = members.map(m => `<tr><td style="font-weight: 500;">${escHtml(m.name)}</td><td style="color: var(--text-secondary);">${escHtml(m.email || '\u2014')}</td><td><span class="role-badge ${(m.role || 'member').toLowerCase()}">${escHtml(m.role || 'Member')}</span></td><td><div class="token-cell"><span class="token-value">${maskToken(m.token)}</span>${m.token ? '<button class="btn-sm" onclick="copyText(\'' + escHtml(m.token) + '\')">Copy</button>' : ''}</div></td><td>${(m.role || '').toLowerCase() !== 'admin' ? '<button class="btn-danger-sm" onclick="deleteMember(\'' + escHtml(m.id) + '\')">Remove</button>' : ''}</td></tr>`).join('');
+  } catch (e) {}
+}
+
+async function deleteMember(id) {
+  if (!confirm('Remove this member? Their token will be revoked.')) return;
+  try { await api('/api/members/' + id, { method: 'DELETE' }); loadMembers(); } catch (e) {}
+}
+
+function toggleAddMember() { document.getElementById('add-member-form').classList.toggle('open'); }
+
+async function addMember() {
+  const name = document.getElementById('new-name').value.trim();
+  const email = document.getElementById('new-email').value.trim();
+  const role = document.getElementById('new-role').value;
+  const btn = document.getElementById('add-member-btn');
+  const tokenDisplay = document.getElementById('new-member-token');
+  if (!name) { alert('Name is required.'); return; }
+  btn.disabled = true; btn.textContent = 'Creating...';
+  try {
+    const data = await api('/api/members', { method: 'POST', body: JSON.stringify({ name, email, role }) });
+    if (data.error) { alert('Error: ' + data.error); }
+    else {
+      document.getElementById('new-member-msg').textContent = 'Member "' + name + '" created!';
+      document.getElementById('new-member-token-value').textContent = data.token || '\u2014';
+      tokenDisplay.classList.add('show');
+      document.getElementById('new-name').value = '';
+      document.getElementById('new-email').value = '';
+      loadMembers();
+    }
+  } catch (e) { alert('Failed to create member.'); }
+  btn.disabled = false; btn.textContent = 'Create';
+}
+
+async function loadLinearSettings() {
+  try {
+    const data = await api('/api/settings/linear');
+    const dot = document.getElementById('linear-dot');
+    const label = document.getElementById('linear-status-text');
+    if (data.configured) {
+      dot.className = 'status-dot-lg connected';
+      label.textContent = 'Connected'; label.style.color = 'var(--success)';
+      if (data.triggerStatus) document.getElementById('linear-trigger-status').value = data.triggerStatus;
+      if (data.triggerLabels) document.getElementById('linear-labels').value = (data.triggerLabels || []).join(', ');
+      document.getElementById('linear-api-key').placeholder = 'lin_api_\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (saved)';
+    } else {
+      dot.className = 'status-dot-lg disconnected';
+      label.textContent = 'Not configured'; label.style.color = 'var(--text-secondary)';
+    }
+  } catch (e) { document.getElementById('linear-status-text').textContent = 'Error loading'; }
+}
+
+async function saveLinear() {
+  const apiKey = document.getElementById('linear-api-key').value.trim();
+  const triggerStatus = document.getElementById('linear-trigger-status').value;
+  const labels = document.getElementById('linear-labels').value.split(',').map(l => l.trim()).filter(Boolean);
+  const btn = document.getElementById('save-linear-btn');
+  const msg = document.getElementById('linear-save-msg');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  msg.className = 'save-msg'; msg.style.display = 'none';
+  try {
+    const body = { triggerStatus, triggerLabels: labels };
+    if (apiKey) body.apiKey = apiKey;
+    const data = await api('/api/settings/linear', { method: 'POST', body: JSON.stringify(body) });
+    if (data.error) { msg.textContent = 'Error: ' + data.error; msg.className = 'save-msg error'; }
+    else { msg.textContent = 'Configuration saved.'; msg.className = 'save-msg success'; loadLinearSettings(); }
+  } catch (e) { msg.textContent = 'Failed to save.'; msg.className = 'save-msg error'; }
+  btn.disabled = false; btn.textContent = 'Save Configuration';
+  setTimeout(() => { msg.style.display = 'none'; msg.className = 'save-msg'; }, 4000);
+}
+
+async function generateInvite() {
+  const email = document.getElementById('invite-email').value.trim();
+  const role = document.getElementById('invite-role').value;
+  const btn = document.getElementById('invite-btn');
+  const resultEl = document.getElementById('invite-result');
+  btn.disabled = true; btn.textContent = 'Generating...';
+  resultEl.className = 'invite-result';
+  try {
+    const data = await api('/api/auth/invite', { method: 'POST', body: JSON.stringify({ email, role }) });
+    if (data.error) { alert('Error: ' + data.error); }
+    else { document.getElementById('invite-link').textContent = data.inviteUrl || ''; resultEl.className = 'invite-result show'; }
+  } catch (e) { alert('Failed to generate invite.'); }
+  btn.disabled = false; btn.textContent = 'Generate Invite Link';
+}
+
+loadMembers();
+loadLinearSettings();
+</script>
+</body>
+</html>
