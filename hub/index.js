@@ -1162,14 +1162,19 @@ wss.on('connection', (ws) => {
 // Stale connection cleanup — every 30s, remove machines with dead WebSockets
 // ---------------------------------------------------------------------------
 setInterval(() => {
+  const now = Date.now();
   for (const [key, machine] of machines) {
-    if (machine.ws.readyState !== 1) {
+    const dead = machine.ws.readyState !== 1;
+    const stale = (now - machine.lastHeartbeat) > 60000; // no heartbeat for 60s
+    if (dead || stale) {
       const teamName = (teams.get(machine.teamId) || {}).name || machine.teamId;
-      log(`[${teamName}] Cleaning up stale machine "${machine.machineName}"`);
+      const reason = dead ? 'disconnected' : 'no heartbeat for 60s';
+      log(`[${teamName}] Removing stale machine "${machine.machineName}" (${reason})`);
+      try { machine.ws.terminate(); } catch (_) {}
       machines.delete(key);
     }
   }
-}, 30000);
+}, 15000);
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
