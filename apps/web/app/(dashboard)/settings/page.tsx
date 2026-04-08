@@ -26,6 +26,7 @@ export default function SettingsPage() {
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
 
+  const [orgName, setOrgName] = useState<string | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKeyEntry[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [creatingKey, setCreatingKey] = useState(false);
@@ -34,7 +35,19 @@ export default function SettingsPage() {
   useEffect(() => {
     loadMembers();
     loadApiKeys();
+    loadOrgName();
   }, []);
+
+  async function loadOrgName() {
+    try {
+      const result = await organization.getFullOrganization();
+      if (result.data) {
+        setOrgName((result.data as any).name ?? null);
+      }
+    } catch {
+      // Ignore
+    }
+  }
 
   async function loadMembers() {
     try {
@@ -102,7 +115,12 @@ export default function SettingsPage() {
         expiresIn: undefined,
       });
       if (result.data) {
-        const data = result.data as unknown as { key: string; id: string; name: string; createdAt: string };
+        const data = result.data as unknown as {
+          key: string;
+          id: string;
+          name: string;
+          createdAt: string;
+        };
         setNewKeyValue(data.key);
         setApiKeys((prev) => [
           ...prev,
@@ -118,8 +136,7 @@ export default function SettingsPage() {
   }
 
   async function handleDeleteApiKey(keyId: string) {
-    if (!confirm("Revoke this API key? Daemons using it will be disconnected."))
-      return;
+    if (!confirm("Revoke this API key? Daemons using it will be disconnected.")) return;
     try {
       await apiKey.deleteApiKey({ keyId });
       setApiKeys((prev) => prev.filter((k) => k.id !== keyId));
@@ -145,19 +162,42 @@ export default function SettingsPage() {
         <div className="af-section-body">
           <div className="flex gap-12 flex-wrap">
             <div className="flex flex-col gap-1">
-              <span style={{ fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--af-text-tertiary)" }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  color: "var(--af-text-tertiary)",
+                }}
+              >
                 Team
               </span>
-              <span style={{ fontSize: 15, fontWeight: 600 }}>
-                {session?.user?.name ?? "\u2014"}
-              </span>
+              <span style={{ fontSize: 15, fontWeight: 600 }}>{orgName ?? "\u2014"}</span>
             </div>
             <div className="flex flex-col gap-1">
-              <span style={{ fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--af-text-tertiary)" }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  color: "var(--af-text-tertiary)",
+                }}
+              >
                 Organization ID
               </span>
-              <span style={{ fontSize: 13, fontWeight: 400, color: "var(--af-text-secondary)", fontFamily: "'SF Mono', monospace" }}>
-                {String((session?.session as Record<string, unknown>)?.activeOrganizationId ?? "\u2014")}
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 400,
+                  color: "var(--af-text-secondary)",
+                  fontFamily: "'SF Mono', monospace",
+                }}
+              >
+                {String(
+                  (session?.session as Record<string, unknown>)?.activeOrganizationId ?? "\u2014",
+                )}
               </span>
             </div>
           </div>
@@ -191,7 +231,9 @@ export default function SettingsPage() {
                 >
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 500 }}>{member.user.name}</p>
-                    <p style={{ fontSize: 12, color: "var(--af-text-secondary)" }}>{member.user.email}</p>
+                    <p style={{ fontSize: 12, color: "var(--af-text-secondary)" }}>
+                      {member.user.email}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span
@@ -235,7 +277,11 @@ export default function SettingsPage() {
           <form
             onSubmit={handleInvite}
             className="flex items-end"
-            style={{ padding: 24, gap: 12, borderTop: members.length > 0 ? "1px solid var(--af-border-subtle)" : "none" }}
+            style={{
+              padding: 24,
+              gap: 12,
+              borderTop: members.length > 0 ? "1px solid var(--af-border-subtle)" : "none",
+            }}
           >
             <div className="flex flex-col flex-1" style={{ gap: 6 }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
@@ -253,19 +299,12 @@ export default function SettingsPage() {
               <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
                 Role
               </label>
-              <select
-                value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value)}
-              >
+              <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
-            <button
-              type="submit"
-              disabled={inviting}
-              className="af-btn-primary"
-            >
+            <button type="submit" disabled={inviting} className="af-btn-primary">
               <UserPlus className="h-3.5 w-3.5 inline mr-1" />
               {inviting ? "Inviting..." : "Invite"}
             </button>
@@ -290,7 +329,14 @@ export default function SettingsPage() {
                 padding: "16px 20px",
               }}
             >
-              <p style={{ color: "var(--af-success)", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
+              <p
+                style={{
+                  color: "var(--af-success)",
+                  fontSize: 13,
+                  marginBottom: 10,
+                  fontWeight: 600,
+                }}
+              >
                 New API key created. Copy it now — it won&apos;t be shown again.
               </p>
               <div className="af-mono-box">
@@ -379,7 +425,11 @@ export default function SettingsPage() {
           <form
             onSubmit={handleCreateApiKey}
             className="flex items-end"
-            style={{ padding: 24, gap: 12, borderTop: apiKeys.length > 0 ? "1px solid var(--af-border-subtle)" : "none" }}
+            style={{
+              padding: 24,
+              gap: 12,
+              borderTop: apiKeys.length > 0 ? "1px solid var(--af-border-subtle)" : "none",
+            }}
           >
             <div className="flex flex-col flex-1" style={{ gap: 6 }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
@@ -392,11 +442,7 @@ export default function SettingsPage() {
                 required
               />
             </div>
-            <button
-              type="submit"
-              disabled={creatingKey}
-              className="af-btn-primary"
-            >
+            <button type="submit" disabled={creatingKey} className="af-btn-primary">
               <Plus className="h-3.5 w-3.5 inline mr-1" />
               {creatingKey ? "Creating..." : "Create"}
             </button>
