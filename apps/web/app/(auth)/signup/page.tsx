@@ -4,17 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signUp, organization } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Play } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -31,7 +21,6 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      // Step 1: Create user account
       const result = await signUp.email({ name, email, password });
       if (result.error) {
         setError(result.error.message ?? "Signup failed");
@@ -39,7 +28,6 @@ export default function SignupPage() {
         return;
       }
 
-      // Step 2: Create organization (team)
       const slug = teamName
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
@@ -56,7 +44,6 @@ export default function SignupPage() {
         return;
       }
 
-      // Step 3: Set as active organization
       await organization.setActive({
         organizationId: orgResult.data!.id,
       });
@@ -70,27 +57,57 @@ export default function SignupPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <span className="text-lg font-bold text-primary">AF</span>
+    <div
+      style={{
+        background: "var(--af-surface)",
+        border: "1px solid var(--af-border-subtle)",
+        borderRadius: 12,
+        overflow: "hidden",
+      }}
+    >
+      {/* Header */}
+      <div style={{ padding: "32px 32px 24px", textAlign: "center" }}>
+        <div
+          className="flex items-center justify-center mx-auto"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: "var(--af-accent-subtle)",
+            marginBottom: 12,
+          }}
+        >
+          <Play className="h-5 w-5" style={{ color: "var(--af-accent)" }} />
         </div>
-        <CardTitle className="text-2xl">Create your account</CardTitle>
-        <CardDescription>
+        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 4 }}>
+          Create your account
+        </h1>
+        <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>
           Set up your AgentFleet account and team
-        </CardDescription>
-      </CardHeader>
+        </p>
+      </div>
+
+      {/* Form */}
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+        <div className="flex flex-col" style={{ padding: "0 32px 24px", gap: 16 }}>
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <div
+              style={{
+                borderRadius: 8,
+                background: "var(--af-danger-subtle)",
+                padding: 12,
+                fontSize: 13,
+                color: "var(--af-danger)",
+              }}
+            >
               {error}
             </div>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="name">Full name</Label>
-            <Input
-              id="name"
+          <div className="flex flex-col" style={{ gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+              Full name
+            </label>
+            <input
               type="text"
               placeholder="Jane Doe"
               value={name}
@@ -98,10 +115,11 @@ export default function SignupPage() {
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
+          <div className="flex flex-col" style={{ gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+              Email
+            </label>
+            <input
               type="email"
               placeholder="you@example.com"
               value={email}
@@ -109,10 +127,11 @@ export default function SignupPage() {
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
+          <div className="flex flex-col" style={{ gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+              Password
+            </label>
+            <input
               type="password"
               placeholder="At least 8 characters"
               value={password}
@@ -121,10 +140,11 @@ export default function SignupPage() {
               minLength={8}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="teamName">Team name</Label>
-            <Input
-              id="teamName"
+          <div className="flex flex-col" style={{ gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+              Team name
+            </label>
+            <input
               type="text"
               placeholder="My Team"
               value={teamName}
@@ -132,19 +152,24 @@ export default function SignupPage() {
               required
             />
           </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading}>
+        </div>
+
+        <div className="flex flex-col items-center" style={{ padding: "0 32px 32px", gap: 16 }}>
+          <button
+            type="submit"
+            disabled={loading}
+            className="af-btn-primary w-full"
+          >
             {loading ? "Creating account..." : "Create account"}
-          </Button>
-          <p className="text-sm text-muted-foreground">
+          </button>
+          <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>
             Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link href="/login" style={{ color: "var(--af-accent)", textDecoration: "none" }}>
               Sign in
             </Link>
           </p>
-        </CardFooter>
+        </div>
       </form>
-    </Card>
+    </div>
   );
 }

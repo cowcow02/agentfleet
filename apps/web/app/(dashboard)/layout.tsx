@@ -22,7 +22,7 @@ export default function DashboardLayout({
   if (isPending) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-muted-foreground">Loading...</div>
+        <div style={{ color: "var(--af-text-tertiary)" }}>Loading...</div>
       </div>
     );
   }
@@ -34,7 +34,9 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      <main className="flex-1 overflow-y-auto" style={{ padding: "32px 40px" }}>
+        {children}
+      </main>
     </div>
   );
 }

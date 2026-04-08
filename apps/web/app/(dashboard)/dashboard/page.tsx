@@ -5,8 +5,7 @@ import { fetchDashboardStats, fetchAgents } from "@/lib/api";
 import { useSSE } from "@/lib/use-sse";
 import { StatsCards } from "@/components/stats-cards";
 import { DispatchForm } from "@/components/dispatch-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import type {
   DashboardStatsResponse,
   Agent,
@@ -20,13 +19,43 @@ interface FeedItem {
   type: string;
 }
 
+const knownTags = ["backend", "be", "api", "frontend", "fe", "bug", "feature", "question", "explore", "simple", "refactor"];
+
+function tagClass(tag: string): string {
+  const t = tag.toLowerCase();
+  if (["backend", "be", "api"].includes(t)) return "af-tag af-tag-backend";
+  if (["frontend", "fe"].includes(t)) return "af-tag af-tag-frontend";
+  if (t === "bug") return "af-tag af-tag-bug";
+  if (t === "feature") return "af-tag af-tag-feature";
+  if (["question", "explore", "refactor"].includes(t)) return "af-tag af-tag-question";
+  if (t === "simple") return "af-tag af-tag-simple";
+  return "af-tag af-tag-default";
+}
+
+const statusColorMap: Record<string, string> = {
+  running: "var(--af-warning)",
+  completed: "var(--af-success)",
+  failed: "var(--af-danger)",
+  dispatched: "var(--af-info)",
+};
+
+const statusBgMap: Record<string, string> = {
+  running: "var(--af-warning-subtle)",
+  completed: "var(--af-success-subtle)",
+  failed: "var(--af-danger-subtle)",
+  dispatched: "var(--af-info-subtle)",
+};
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [recentDispatches, setRecentDispatches] = useState<Dispatch[]>([]);
 
-  // Load initial data
   useEffect(() => {
     fetchDashboardStats().then(setStats).catch(console.error);
     fetchAgents()
@@ -34,12 +63,10 @@ export default function DashboardPage() {
       .catch(console.error);
   }, []);
 
-  // Handle SSE events
   const handleSSE = useCallback((event: SseEvent) => {
     switch (event.event) {
       case "agent:update":
         setAgents(event.data.agents);
-        // Refresh stats when agents change
         fetchDashboardStats().then(setStats).catch(console.error);
         break;
       case "dispatch:update":
@@ -54,7 +81,6 @@ export default function DashboardPage() {
           }
           return [event.data.dispatch, ...prev].slice(0, 10);
         });
-        // Refresh stats
         fetchDashboardStats().then(setStats).catch(console.error);
         break;
       case "feed:event":
@@ -66,108 +92,154 @@ export default function DashboardPage() {
   const { connected } = useSSE(handleSSE);
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-[22px] font-bold tracking-tight">Dashboard</h1>
-        <div className="flex items-center gap-2">
-          <div
-            className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-400" : "bg-red-400"}`}
-          />
-          <span className="text-xs text-muted-foreground">
-            {connected ? "Live" : "Disconnected"}
-          </span>
-        </div>
-      </div>
+      <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 28 }}>
+        Dashboard
+      </h1>
 
       {/* Stats */}
-      <StatsCards stats={stats} />
+      <div style={{ marginBottom: 32 }}>
+        <StatsCards stats={stats} />
+      </div>
 
-      {/* Dispatch form — full width */}
-      <DispatchForm />
+      {/* Dispatch form */}
+      <div style={{ marginBottom: 28 }}>
+        <DispatchForm />
+      </div>
 
       {/* Fleet Overview + Live Feed side by side */}
-      <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-        {/* Fleet overview */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-[13px] font-semibold">Fleet Overview</CardTitle>
-            <span className="text-xs text-muted-foreground">{agents.length} agents</span>
-          </CardHeader>
-          <CardContent className="max-h-[380px] overflow-y-auto p-2">
+      <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+        {/* Fleet overview panel */}
+        <div className="af-panel">
+          <div className="af-panel-header">
+            <span>Fleet Overview</span>
+            <span style={{ fontSize: 12, fontWeight: 400, color: "var(--af-text-secondary)" }}>
+              {agents.length} agents
+            </span>
+          </div>
+          <div style={{ padding: 8, maxHeight: 380, overflowY: "auto" }}>
             {agents.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-9">
-                Waiting for agents...
-              </p>
+              <div className="af-empty" style={{ padding: 36 }}>Waiting for agents...</div>
             ) : (
-              <div className="space-y-0.5">
-                {agents.map((agent) => (
-                  <div
-                    key={`${agent.machine}-${agent.name}`}
-                    className="grid items-center gap-3.5 rounded-lg p-3 transition-colors hover:bg-muted"
-                    style={{ gridTemplateColumns: "10px 1fr auto" }}
-                  >
+              <div>
+                {agents.map((agent) => {
+                  const isIdle = agent.running < agent.capacity;
+                  return (
                     <div
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        agent.running < agent.capacity
-                          ? "bg-emerald-400 shadow-[0_0_0_3px_rgba(52,211,153,0.12)]"
-                          : "bg-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.10)]"
-                      }`}
-                    />
-                    <div>
-                      <p className="text-[13px] font-semibold">{agent.name}</p>
-                      <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                        {agent.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 rounded-full border-0">
-                            {tag}
-                          </Badge>
-                        ))}
+                      key={`${agent.machine}-${agent.name}`}
+                      className="grid items-center"
+                      style={{
+                        gridTemplateColumns: "10px 1fr auto",
+                        gap: 14,
+                        padding: "12px 14px",
+                        borderRadius: 8,
+                        marginBottom: 2,
+                        transition: "background 0.1s",
+                        cursor: "default",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "var(--af-surface-hover)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      <div
+                        className={`af-dot ${isIdle ? "af-dot-online" : "af-dot-busy"}`}
+                      />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{agent.name}</div>
+                        <div style={{ fontSize: 12, color: "var(--af-text-secondary)", marginTop: 2 }}>
+                          {agent.memberName || agent.machine}
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap" style={{ marginTop: 5 }}>
+                          {agent.tags.map((tag) => (
+                            <span key={tag} className={tagClass(tag)}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "var(--af-text-secondary)",
+                          whiteSpace: "nowrap",
+                          fontFeatureSettings: "'tnum'",
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: agent.running > 0 ? "var(--af-warning)" : "var(--af-success)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {agent.running}
+                        </span>
+                        /{agent.capacity}
                       </div>
                     </div>
-                    <div className="text-[13px] text-muted-foreground tabular-nums whitespace-nowrap">
-                      <span className={agent.running > 0 ? "text-amber-400 font-semibold" : "text-emerald-400 font-semibold"}>
-                        {agent.running}
-                      </span>
-                      /{agent.capacity}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Live feed */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-[13px] font-semibold">Live Feed</CardTitle>
-            <span className="text-xs text-muted-foreground">{feedItems.length} events</span>
-          </CardHeader>
-          <CardContent className="max-h-[380px] overflow-y-auto p-2">
-            {feedItems.length === 0 && recentDispatches.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-9">
-                No events yet
-              </p>
+        {/* Live feed panel */}
+        <div className="af-panel">
+          <div className="af-panel-header">
+            <span>Live Feed</span>
+            <span style={{ fontSize: 12, fontWeight: 400, color: "var(--af-text-secondary)" }}>
+              {feedItems.length} events
+            </span>
+          </div>
+          <div style={{ padding: 8, maxHeight: 380, overflowY: "auto" }}>
+            {feedItems.length === 0 ? (
+              <div className="af-empty" style={{ padding: 36 }}>No events yet</div>
             ) : (
-              <div className="space-y-0.5">
+              <div>
                 {feedItems.map((item, i) => (
                   <div
                     key={`${item.timestamp}-${i}`}
-                    className="flex items-baseline gap-2.5 rounded-md px-3.5 py-2 text-[13px] transition-colors hover:bg-muted"
+                    className="flex items-baseline"
+                    style={{
+                      gap: 10,
+                      padding: "8px 14px",
+                      fontSize: 13,
+                      borderRadius: 6,
+                      marginBottom: 2,
+                      transition: "background 0.1s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "var(--af-surface-hover)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                    }}
                   >
-                    <span className="text-[11px] font-mono text-muted-foreground shrink-0">
-                      {new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    <span
+                      style={{
+                        color: "var(--af-text-tertiary)",
+                        fontFamily: "'SF Mono', monospace",
+                        fontSize: 11,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {formatTime(item.timestamp)}
                     </span>
                     <span
-                      className={
-                        item.type === "error"
-                          ? "text-red-400"
-                          : item.type === "success"
-                            ? "text-emerald-400"
-                            : item.type === "status"
-                              ? "text-amber-400"
-                              : "text-violet-400"
-                      }
+                      style={{
+                        color:
+                          item.type === "error"
+                            ? "var(--af-danger)"
+                            : item.type === "success"
+                              ? "var(--af-success)"
+                              : item.type === "status"
+                                ? "var(--af-warning)"
+                                : "var(--af-info)",
+                      }}
                     >
                       {item.message}
                     </span>
@@ -175,8 +247,111 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Dispatches panel */}
+      <div className="af-panel" style={{ marginBottom: 32 }}>
+        <div className="af-panel-header">
+          <span>Recent Dispatches</span>
+          <span style={{ fontSize: 12, fontWeight: 400, color: "var(--af-text-secondary)" }}>
+            {recentDispatches.length}
+          </span>
+        </div>
+        <div style={{ padding: 8, maxHeight: 500, overflowY: "auto" }}>
+          {recentDispatches.length === 0 ? (
+            <div className="af-empty" style={{ padding: 36 }}>
+              No dispatches yet. Use the form above to send a ticket.
+            </div>
+          ) : (
+            <div>
+              {recentDispatches.map((d) => {
+                const source = d.source || "manual";
+                return (
+                  <div
+                    key={d.id}
+                    style={{
+                      padding: "14px 16px",
+                      borderRadius: 8,
+                      marginBottom: 4,
+                      borderLeft: `3px solid ${statusColorMap[d.status] || "var(--border)"}`,
+                      transition: "background 0.1s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "var(--af-surface-hover)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <div className="flex justify-between items-center" style={{ marginBottom: 6 }}>
+                      <div className="flex items-center">
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            fontFamily: "'SF Mono', monospace",
+                            fontSize: 13,
+                          }}
+                        >
+                          {d.ticketRef}
+                        </span>
+                        <span
+                          style={{
+                            color: "var(--af-text-secondary)",
+                            marginLeft: 10,
+                            fontSize: 13,
+                          }}
+                        >
+                          {d.title}
+                        </span>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            fontSize: 10,
+                            fontWeight: 500,
+                            padding: "2px 8px",
+                            borderRadius: 100,
+                            marginLeft: 8,
+                            background: source === "linear" ? "var(--af-info-subtle)" : "var(--af-accent-subtle)",
+                            color: source === "linear" ? "var(--af-info)" : "var(--af-accent)",
+                          }}
+                        >
+                          {source === "linear" ? "Linear" : "Manual"}
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          padding: "3px 10px",
+                          borderRadius: 100,
+                          background: statusBgMap[d.status] || "var(--af-border-subtle)",
+                          color: statusColorMap[d.status] || "var(--af-text-secondary)",
+                        }}
+                      >
+                        {d.status}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--af-text-secondary)", marginTop: 4 }}>
+                      <span style={{ color: "var(--af-accent)" }}>{d.agentName}</span>
+                      {" \u2014 "}
+                      <span style={{ color: "var(--af-text-tertiary)" }}>
+                        {formatTime(d.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <Link
+          href="/dispatches"
+          className="af-view-all"
+        >
+          View all dispatches &rarr;
+        </Link>
       </div>
     </div>
   );

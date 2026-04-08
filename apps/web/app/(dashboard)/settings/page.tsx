@@ -3,20 +3,8 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { organization, apiKey, useSession } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { LinearConfig } from "@/components/linear-config";
-import { Copy, Trash2, Plus, UserPlus } from "lucide-react";
+import { Copy, Trash2, UserPlus, Plus } from "lucide-react";
 
 interface Member {
   id: string;
@@ -33,13 +21,11 @@ interface ApiKeyEntry {
 export default function SettingsPage() {
   const { data: session } = useSession();
 
-  // Members
   const [members, setMembers] = useState<Member[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
 
-  // API Keys
   const [apiKeys, setApiKeys] = useState<ApiKeyEntry[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [creatingKey, setCreatingKey] = useState(false);
@@ -60,7 +46,7 @@ export default function SettingsPage() {
         setMembers((data as { members: Member[] }).members);
       }
     } catch {
-      // Ignore — may not be org admin
+      // Ignore
     }
   }
 
@@ -143,175 +129,280 @@ export default function SettingsPage() {
     }
   }
 
+  function copyText(text: string) {
+    navigator.clipboard.writeText(text).then(() => toast.success("Copied"));
+  }
+
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage your team, API keys, and integrations
-        </p>
+    <div style={{ maxWidth: 820 }}>
+      <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 32 }}>
+        Team Settings
+      </h1>
+
+      {/* Team Info */}
+      <div className="af-section" style={{ marginBottom: 24 }}>
+        <div className="af-section-header">Team Info</div>
+        <div className="af-section-body">
+          <div className="flex gap-12 flex-wrap">
+            <div className="flex flex-col gap-1">
+              <span style={{ fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--af-text-tertiary)" }}>
+                Team
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 600 }}>
+                {session?.user?.name ?? "\u2014"}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span style={{ fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--af-text-tertiary)" }}>
+                Organization ID
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 400, color: "var(--af-text-secondary)", fontFamily: "'SF Mono', monospace" }}>
+                {String((session?.session as Record<string, unknown>)?.activeOrganizationId ?? "\u2014")}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Organization Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Team</CardTitle>
-          <CardDescription>
-            Organization: {String((session?.session as Record<string, unknown>)?.activeOrganizationId ?? "None")}
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
       {/* Members */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Members</CardTitle>
-          <CardDescription>Manage team members and invitations</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Member list */}
-          <div className="space-y-2">
-            {members.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center justify-between rounded-lg border p-3"
-              >
-                <div>
-                  <p className="text-sm font-medium">{member.user.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {member.user.email}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{member.role}</Badge>
-                  {member.user.id !== session?.user?.id && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleRemoveMember(member.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <Separator />
-
-          {/* Invite form */}
-          <form onSubmit={handleInvite} className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="Email address"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              required
-              className="flex-1"
-            />
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value)}
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-            >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-            </select>
-            <Button type="submit" disabled={inviting} size="sm">
-              <UserPlus className="h-4 w-4 mr-1" />
-              {inviting ? "Inviting..." : "Invite"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* API Keys */}
-      <Card>
-        <CardHeader>
-          <CardTitle>API Keys</CardTitle>
-          <CardDescription>
-            Create API keys for daemon authentication
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* New key display */}
-          {newKeyValue && (
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-              <p className="text-sm font-medium mb-2">
-                New API key created. Copy it now — it won&apos;t be shown again.
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs bg-muted px-3 py-2 rounded break-all">
-                  {newKeyValue}
-                </code>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText(newKeyValue);
-                    toast.success("Copied to clipboard");
+      <div className="af-section" style={{ marginBottom: 24 }}>
+        <div className="af-section-header">
+          <span>Members</span>
+        </div>
+        <div style={{ padding: 0 }}>
+          {/* Members list */}
+          {members.length > 0 && (
+            <div>
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between"
+                  style={{
+                    padding: "14px 24px",
+                    borderBottom: "1px solid var(--af-border-subtle)",
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--af-surface-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  <Copy className="h-4 w-4" />
-                </Button>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 500 }}>{member.user.name}</p>
+                    <p style={{ fontSize: 12, color: "var(--af-text-secondary)" }}>{member.user.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 500,
+                        padding: "3px 10px",
+                        borderRadius: 100,
+                      }}
+                      className={member.role === "admin" ? "af-role-admin" : "af-role-member"}
+                    >
+                      {member.role}
+                    </span>
+                    {member.user.id !== session?.user?.id && (
+                      <button
+                        onClick={() => handleRemoveMember(member.id)}
+                        style={{
+                          background: "transparent",
+                          border: "1px solid var(--af-danger-subtle)",
+                          color: "var(--af-danger)",
+                          padding: "5px 10px",
+                          fontSize: 11,
+                          fontWeight: 500,
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          opacity: 0.7,
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Invite form */}
+          <form
+            onSubmit={handleInvite}
+            className="flex items-end"
+            style={{ padding: 24, gap: 12, borderTop: members.length > 0 ? "1px solid var(--af-border-subtle)" : "none" }}
+          >
+            <div className="flex flex-col flex-1" style={{ gap: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                Email
+              </label>
+              <input
+                type="email"
+                placeholder="teammate@team.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex flex-col" style={{ gap: 6, width: 120 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                Role
+              </label>
+              <select
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value)}
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={inviting}
+              className="af-btn-primary"
+            >
+              <UserPlus className="h-3.5 w-3.5 inline mr-1" />
+              {inviting ? "Inviting..." : "Invite"}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* API Keys */}
+      <div className="af-section" style={{ marginBottom: 24 }}>
+        <div className="af-section-header">
+          <span>API Keys</span>
+        </div>
+        <div className="af-section-body" style={{ padding: 0 }}>
+          {/* New key display */}
+          {newKeyValue && (
+            <div
+              style={{
+                margin: 24,
+                background: "var(--af-success-subtle)",
+                border: "1px solid rgba(62,207,142,0.25)",
+                borderRadius: 10,
+                padding: "16px 20px",
+              }}
+            >
+              <p style={{ color: "var(--af-success)", fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
+                New API key created. Copy it now — it won&apos;t be shown again.
+              </p>
+              <div className="af-mono-box">
+                <code style={{ color: "var(--af-warning)", fontWeight: 600 }}>{newKeyValue}</code>
+                <button
+                  type="button"
+                  onClick={() => copyText(newKeyValue)}
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--af-text-secondary)",
+                    padding: "5px 10px",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2 text-xs"
+              <button
+                type="button"
                 onClick={() => setNewKeyValue(null)}
+                style={{
+                  marginTop: 8,
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--af-text-secondary)",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
               >
                 Dismiss
-              </Button>
+              </button>
             </div>
           )}
 
           {/* Existing keys */}
-          <div className="space-y-2">
-            {apiKeys.map((key) => (
-              <div
-                key={key.id}
-                className="flex items-center justify-between rounded-lg border p-3"
-              >
-                <div>
-                  <p className="text-sm font-medium">{key.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Created {new Date(key.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleDeleteApiKey(key.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+          {apiKeys.map((key) => (
+            <div
+              key={key.id}
+              className="flex items-center justify-between"
+              style={{
+                padding: "14px 24px",
+                borderBottom: "1px solid var(--af-border-subtle)",
+                transition: "background 0.1s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--af-surface-hover)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 500 }}>{key.name}</p>
+                <p style={{ fontSize: 12, color: "var(--af-text-secondary)" }}>
+                  Created {new Date(key.createdAt).toLocaleDateString()}
+                </p>
               </div>
-            ))}
-          </div>
-
-          <Separator />
+              <button
+                onClick={() => handleDeleteApiKey(key.id)}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--af-danger-subtle)",
+                  color: "var(--af-danger)",
+                  padding: "5px 10px",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  opacity: 0.7,
+                  transition: "all 0.15s",
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
 
           {/* Create key form */}
-          <form onSubmit={handleCreateApiKey} className="flex gap-2">
-            <Input
-              placeholder="Key name (e.g. production-daemon)"
-              value={newKeyName}
-              onChange={(e) => setNewKeyName(e.target.value)}
-              required
-              className="flex-1"
-            />
-            <Button type="submit" disabled={creatingKey} size="sm">
-              <Plus className="h-4 w-4 mr-1" />
+          <form
+            onSubmit={handleCreateApiKey}
+            className="flex items-end"
+            style={{ padding: 24, gap: 12, borderTop: apiKeys.length > 0 ? "1px solid var(--af-border-subtle)" : "none" }}
+          >
+            <div className="flex flex-col flex-1" style={{ gap: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                Key name
+              </label>
+              <input
+                placeholder="production-daemon"
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={creatingKey}
+              className="af-btn-primary"
+            >
+              <Plus className="h-3.5 w-3.5 inline mr-1" />
               {creatingKey ? "Creating..." : "Create"}
-            </Button>
+            </button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Linear Integration */}
       <LinearConfig />

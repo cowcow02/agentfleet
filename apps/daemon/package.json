@@ -1,5 +1,5 @@
 {
-  "name": "agentfleet-daemon",
+  "name": "@agentfleet/daemon",
   "version": "0.1.0",
   "description": "AgentFleet Daemon - agent registration and execution",
   "main": "index.js",

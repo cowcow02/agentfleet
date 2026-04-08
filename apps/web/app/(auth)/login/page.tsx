@@ -4,17 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn, organization } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Play } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +23,6 @@ export default function LoginPage() {
       if (result.error) {
         setError(result.error.message ?? "Login failed");
       } else {
-        // Set active organization (required for org-scoped API calls)
         const orgs = await organization.list();
         if (orgs.data && orgs.data.length > 0) {
           await organization.setActive({ organizationId: orgs.data[0].id });
@@ -48,25 +37,57 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <span className="text-lg font-bold text-primary">AF</span>
+    <div
+      style={{
+        background: "var(--af-surface)",
+        border: "1px solid var(--af-border-subtle)",
+        borderRadius: 12,
+        overflow: "hidden",
+      }}
+    >
+      {/* Header */}
+      <div style={{ padding: "32px 32px 24px", textAlign: "center" }}>
+        <div
+          className="flex items-center justify-center mx-auto"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: "var(--af-accent-subtle)",
+            marginBottom: 12,
+          }}
+        >
+          <Play className="h-5 w-5" style={{ color: "var(--af-accent)" }} />
         </div>
-        <CardTitle className="text-2xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your AgentFleet account</CardDescription>
-      </CardHeader>
+        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 4 }}>
+          Welcome back
+        </h1>
+        <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>
+          Sign in to your AgentFleet account
+        </p>
+      </div>
+
+      {/* Form */}
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+        <div className="flex flex-col" style={{ padding: "0 32px 24px", gap: 16 }}>
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <div
+              style={{
+                borderRadius: 8,
+                background: "var(--af-danger-subtle)",
+                padding: 12,
+                fontSize: 13,
+                color: "var(--af-danger)",
+              }}
+            >
               {error}
             </div>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
+          <div className="flex flex-col" style={{ gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+              Email
+            </label>
+            <input
               type="email"
               placeholder="you@example.com"
               value={email}
@@ -74,10 +95,11 @@ export default function LoginPage() {
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
+          <div className="flex flex-col" style={{ gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+              Password
+            </label>
+            <input
               type="password"
               placeholder="Enter your password"
               value={password}
@@ -85,19 +107,24 @@ export default function LoginPage() {
               required
             />
           </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading}>
+        </div>
+
+        <div className="flex flex-col items-center" style={{ padding: "0 32px 32px", gap: 16 }}>
+          <button
+            type="submit"
+            disabled={loading}
+            className="af-btn-primary w-full"
+          >
             {loading ? "Signing in..." : "Sign in"}
-          </Button>
-          <p className="text-sm text-muted-foreground">
+          </button>
+          <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-primary hover:underline">
+            <Link href="/signup" style={{ color: "var(--af-accent)", textDecoration: "none" }}>
               Sign up
             </Link>
           </p>
-        </CardFooter>
+        </div>
       </form>
-    </Card>
+    </div>
   );
 }

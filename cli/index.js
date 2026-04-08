@@ -217,7 +217,7 @@ function cmdStart() {
     process.exit(1);
   }
 
-  const daemonPath = path.join(__dirname, '..', 'prototype', 'daemon', 'index.js');
+  const daemonPath = path.join(__dirname, '..', 'apps', 'daemon', 'index.js');
   if (!fs.existsSync(daemonPath)) {
     console.error(C.red(`Error: Daemon not found at ${daemonPath}`));
     process.exit(1);
@@ -392,7 +392,7 @@ function cmdSetup() {
       }
 
       // Find daemon path
-      const daemonPath = path.join(__dirname, '..', 'prototype', 'daemon', 'index.js');
+      const daemonPath = path.join(__dirname, '..', 'apps', 'daemon', 'index.js');
       if (!fs.existsSync(daemonPath)) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: 'Daemon not found at ' + daemonPath }));

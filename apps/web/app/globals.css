@@ -46,6 +46,26 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Semantic color tokens */
+  --color-af-success: var(--af-success);
+  --color-af-success-subtle: var(--af-success-subtle);
+  --color-af-warning: var(--af-warning);
+  --color-af-warning-subtle: var(--af-warning-subtle);
+  --color-af-danger: var(--af-danger);
+  --color-af-danger-subtle: var(--af-danger-subtle);
+  --color-af-info: var(--af-info);
+  --color-af-info-subtle: var(--af-info-subtle);
+  --color-af-accent: var(--af-accent);
+  --color-af-accent-subtle: var(--af-accent-subtle);
+  --color-af-accent-hover: var(--af-accent-hover);
+  --color-af-surface: var(--af-surface);
+  --color-af-surface-hover: var(--af-surface-hover);
+  --color-af-surface-elevated: var(--af-surface-elevated);
+  --color-af-border-subtle: var(--af-border-subtle);
+  --color-af-text: var(--af-text);
+  --color-af-text-secondary: var(--af-text-secondary);
+  --color-af-text-tertiary: var(--af-text-tertiary);
 }
 
 /* Light mode — warm cream/beige from prototype */
@@ -64,7 +84,7 @@
   --muted-foreground: #6B6560;
   --accent: #14B8A6;
   --accent-foreground: #FDFBF9;
-  --destructive: #DC2626;
+  --destructive: #C53030;
   --border: #E8E2DA;
   --input: #E8E2DA;
   --ring: #14B8A6;
@@ -72,7 +92,7 @@
   --chart-2: #8168E0;
   --chart-3: #D97706;
   --chart-4: #059669;
-  --chart-5: #DC2626;
+  --chart-5: #C53030;
   --radius: 0.625rem;
   --sidebar: #F5F1EC;
   --sidebar-foreground: #1A1A1A;
@@ -82,6 +102,26 @@
   --sidebar-accent-foreground: #14B8A6;
   --sidebar-border: #F0EBE4;
   --sidebar-ring: #14B8A6;
+
+  /* AgentFleet semantic tokens — light */
+  --af-success: #059669;
+  --af-success-subtle: rgba(5, 150, 105, 0.10);
+  --af-warning: #D97706;
+  --af-warning-subtle: rgba(217, 119, 6, 0.10);
+  --af-danger: #C53030;
+  --af-danger-subtle: rgba(197, 48, 48, 0.10);
+  --af-info: #8168E0;
+  --af-info-subtle: rgba(129, 104, 224, 0.10);
+  --af-accent: #14B8A6;
+  --af-accent-subtle: rgba(20, 184, 166, 0.10);
+  --af-accent-hover: #0D9488;
+  --af-surface: #F5F1EC;
+  --af-surface-hover: #EDE8E0;
+  --af-surface-elevated: #E8E2DA;
+  --af-border-subtle: #F0EBE4;
+  --af-text: #1A1A1A;
+  --af-text-secondary: #6B6560;
+  --af-text-tertiary: #8A8580;
 }
 
 /* Dark mode — AgentFleet default */
@@ -92,31 +132,51 @@
   --card-foreground: #E8E8F0;
   --popover: #2C2C33;
   --popover-foreground: #E8E8F0;
-  --primary: #14B8A6;
+  --primary: #2DD4BF;
   --primary-foreground: #1a1a20;
   --secondary: #38384A;
   --secondary-foreground: #E8E8F0;
   --muted: #333340;
   --muted-foreground: #9090A0;
-  --accent: #14B8A6;
+  --accent: #2DD4BF;
   --accent-foreground: #1a1a20;
   --destructive: #F87171;
   --border: #38383F;
   --input: #38383F;
-  --ring: #14B8A6;
-  --chart-1: #14B8A6;
+  --ring: #2DD4BF;
+  --chart-1: #2DD4BF;
   --chart-2: #A78BFA;
   --chart-3: #FBBF24;
   --chart-4: #34D399;
   --chart-5: #F87171;
   --sidebar: #2C2C33;
   --sidebar-foreground: #E8E8F0;
-  --sidebar-primary: #14B8A6;
+  --sidebar-primary: #2DD4BF;
   --sidebar-primary-foreground: #1a1a20;
-  --sidebar-accent: rgba(20, 184, 166, 0.12);
-  --sidebar-accent-foreground: #14B8A6;
-  --sidebar-border: #38383F;
-  --sidebar-ring: #14B8A6;
+  --sidebar-accent: rgba(45, 212, 191, 0.12);
+  --sidebar-accent-foreground: #2DD4BF;
+  --sidebar-border: #2F2F38;
+  --sidebar-ring: #2DD4BF;
+
+  /* AgentFleet semantic tokens — dark */
+  --af-success: #34D399;
+  --af-success-subtle: rgba(52, 211, 153, 0.12);
+  --af-warning: #FBBF24;
+  --af-warning-subtle: rgba(251, 191, 36, 0.10);
+  --af-danger: #F87171;
+  --af-danger-subtle: rgba(248, 113, 113, 0.12);
+  --af-info: #A78BFA;
+  --af-info-subtle: rgba(167, 139, 250, 0.12);
+  --af-accent: #2DD4BF;
+  --af-accent-subtle: rgba(45, 212, 191, 0.12);
+  --af-accent-hover: #5EEAD4;
+  --af-surface: #2C2C33;
+  --af-surface-hover: #333340;
+  --af-surface-elevated: #38384A;
+  --af-border-subtle: #2F2F38;
+  --af-text: #E8E8F0;
+  --af-text-secondary: #9090A0;
+  --af-text-tertiary: #707078;
 }
 
 @layer base {
@@ -125,8 +185,466 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    line-height: 1.6;
   }
   html {
     @apply font-sans;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+}
+
+/* =============================================
+   AgentFleet Design System — Component Styles
+   ============================================= */
+
+@layer components {
+
+  /* --- Input / Select / Textarea overrides --- */
+  /* Override shadcn defaults to match prototype exactly */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select,
+  [data-slot="select-trigger"],
+  [role="combobox"] {
+    background: var(--background) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    color: var(--foreground) !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    transition: border-color 0.15s !important;
+    outline: none !important;
+    box-shadow: none !important;
+    height: auto !important;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):focus,
+  textarea:focus,
+  select:focus,
+  [data-slot="select-trigger"]:focus,
+  [role="combobox"]:focus,
+  [data-slot="select-trigger"][data-state="open"],
+  [role="combobox"][data-state="open"] {
+    border-color: var(--af-accent) !important;
+    box-shadow: 0 0 0 3px var(--af-accent-subtle) !important;
+    outline: none !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--af-text-tertiary) !important;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 48px;
+  }
+
+  /* Native select with custom chevron */
+  select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    padding-right: 32px !important;
+    cursor: pointer;
+  }
+
+  /* --- Button styles --- */
+  /* Primary button — accent color with hover lift */
+  .btn-primary,
+  button[type="submit"]:not(.btn-outline):not([variant]),
+  [data-slot="button"].bg-primary,
+  .af-btn-primary {
+    background: var(--af-accent) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s !important;
+    white-space: nowrap;
+  }
+
+  .btn-primary:hover:not(:disabled),
+  .af-btn-primary:hover:not(:disabled) {
+    background: var(--af-accent-hover) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--af-accent-subtle) !important;
+  }
+
+  .btn-primary:disabled,
+  .af-btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* --- Segment tabs / Tab toggle --- */
+  .af-tabs {
+    display: inline-flex;
+    background: var(--background);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .af-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--af-text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .af-tab-btn:hover {
+    color: var(--af-text);
+  }
+
+  .af-tab-btn.active,
+  .af-tab-btn[data-state="active"] {
+    background: var(--af-surface-elevated);
+    color: var(--af-text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Override shadcn TabsList to match prototype segment control */
+  [role="tablist"] {
+    display: inline-flex !important;
+    background: var(--background) !important;
+    border-radius: 8px !important;
+    padding: 3px !important;
+    gap: 2px !important;
+    border: none !important;
+    height: auto !important;
+  }
+
+  [role="tab"] {
+    background: transparent !important;
+    border: none !important;
+    color: var(--af-text-secondary) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 7px 18px !important;
+    border-radius: 6px !important;
+    transition: all 0.15s !important;
+    height: auto !important;
+  }
+
+  [role="tab"]:hover {
+    color: var(--af-text) !important;
+  }
+
+  [role="tab"][data-state="active"] {
+    background: var(--af-surface-elevated) !important;
+    color: var(--af-text) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  /* --- Card styling --- */
+  .af-card,
+  [data-slot="card"] {
+    background: var(--af-surface) !important;
+    border: 1px solid var(--af-border-subtle) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+  }
+
+  /* --- Tag / Badge semantic colors --- */
+  .af-tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 100px;
+    border: none;
+    display: inline-block;
+  }
+
+  .af-tag-backend,
+  .af-tag-be,
+  .af-tag-api {
+    background: var(--af-info-subtle);
+    color: var(--af-info);
+  }
+
+  .af-tag-frontend,
+  .af-tag-fe {
+    background: var(--af-accent-subtle);
+    color: var(--af-accent);
+  }
+
+  .af-tag-bug {
+    background: var(--af-danger-subtle);
+    color: var(--af-danger);
+  }
+
+  .af-tag-feature {
+    background: var(--af-success-subtle);
+    color: var(--af-success);
+  }
+
+  .af-tag-question,
+  .af-tag-explore,
+  .af-tag-refactor {
+    background: var(--af-accent-subtle);
+    color: var(--af-accent);
+  }
+
+  .af-tag-simple {
+    background: var(--af-warning-subtle);
+    color: var(--af-warning);
+  }
+
+  .af-tag-default {
+    background: var(--af-border-subtle);
+    color: var(--af-text-secondary);
+  }
+
+  /* --- Status badge pills --- */
+  .af-status-running {
+    background: var(--af-warning-subtle);
+    color: var(--af-warning);
+  }
+
+  .af-status-completed {
+    background: var(--af-success-subtle);
+    color: var(--af-success);
+  }
+
+  .af-status-failed {
+    background: var(--af-danger-subtle);
+    color: var(--af-danger);
+  }
+
+  .af-status-dispatched {
+    background: var(--af-info-subtle);
+    color: var(--af-info);
+  }
+
+  /* --- Source badge --- */
+  .af-source-manual {
+    background: var(--af-accent-subtle);
+    color: var(--af-accent);
+  }
+
+  .af-source-linear {
+    background: var(--af-info-subtle);
+    color: var(--af-info);
+  }
+
+  /* --- Status dot indicator --- */
+  .af-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .af-dot-online {
+    background: var(--af-success);
+    box-shadow: 0 0 0 3px var(--af-success-subtle);
+  }
+
+  .af-dot-busy {
+    background: var(--af-warning);
+    box-shadow: 0 0 0 3px var(--af-warning-subtle);
+  }
+
+  .af-dot-offline {
+    background: var(--af-text-tertiary);
+  }
+
+  /* --- Dispatch card left border colors --- */
+  .af-dispatch-card {
+    background: var(--af-surface);
+    border: 1px solid var(--af-border-subtle);
+    border-radius: 12px;
+    padding: 20px 24px;
+    border-left: 4px solid var(--border);
+    transition: all 0.15s;
+  }
+
+  .af-dispatch-card:hover {
+    border-color: var(--border);
+  }
+
+  .af-dispatch-card.running {
+    border-left-color: var(--af-warning);
+  }
+
+  .af-dispatch-card.completed {
+    border-left-color: var(--af-success);
+  }
+
+  .af-dispatch-card.failed {
+    border-left-color: var(--af-danger);
+  }
+
+  .af-dispatch-card.dispatched {
+    border-left-color: var(--af-info);
+  }
+
+  /* --- Code block --- */
+  .af-code-block {
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--af-success);
+  }
+
+  /* --- Section (settings page card sections) --- */
+  .af-section {
+    background: var(--af-surface);
+    border: 1px solid var(--af-border-subtle);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: none;
+  }
+
+  .af-section-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--af-border-subtle);
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .af-section-body {
+    padding: 24px;
+  }
+
+  /* --- Panel (dashboard panels) --- */
+  .af-panel {
+    background: var(--af-surface);
+    border: 1px solid var(--af-border-subtle);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: none;
+  }
+
+  .af-panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--af-border-subtle);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* --- View all link --- */
+  .af-view-all {
+    display: block;
+    text-align: center;
+    padding: 12px;
+    color: var(--af-accent);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    border-top: 1px solid var(--af-border-subtle);
+    transition: background 0.1s;
+  }
+
+  .af-view-all:hover {
+    background: var(--af-surface-hover);
+  }
+
+  /* --- Empty state --- */
+  .af-empty {
+    text-align: center;
+    padding: 48px 32px;
+    color: var(--af-text-tertiary);
+    font-size: 13px;
+  }
+
+  /* --- Timeline (dispatch detail) --- */
+  .af-timeline-entry {
+    display: grid;
+    grid-template-columns: 80px 60px 1fr;
+    gap: 10px;
+    padding: 5px 0 5px 16px;
+    font-size: 13px;
+    position: relative;
+  }
+
+  .af-timeline-entry::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--af-border-subtle);
+    border-radius: 1px;
+  }
+
+  .af-timeline-entry:first-child::before { top: 50%; }
+  .af-timeline-entry:last-child::before { bottom: 50%; }
+
+  .af-timeline-entry::after {
+    content: '';
+    position: absolute;
+    left: -3px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--af-surface-elevated);
+    border: 2px solid var(--border);
+    z-index: 1;
+  }
+
+  /* --- Webhook / token display box --- */
+  .af-mono-box {
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .af-mono-box code,
+  .af-mono-box span {
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 13px;
+    word-break: break-all;
+    flex: 1;
+  }
+
+  /* --- Role badges --- */
+  .af-role-admin {
+    background: var(--af-accent-subtle);
+    color: var(--af-accent);
+  }
+
+  .af-role-member {
+    background: var(--af-info-subtle);
+    color: var(--af-info);
   }
 }

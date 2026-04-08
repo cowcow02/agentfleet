@@ -3,13 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { fetchDispatches } from "@/lib/api";
 import { DispatchList } from "@/components/dispatch-list";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { Dispatch } from "@agentfleet/types";
 
@@ -49,59 +42,55 @@ export default function DispatchesPage() {
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dispatches</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {total} total dispatch{total !== 1 ? "es" : ""}
-        </p>
+    <div>
+      {/* Page header */}
+      <div className="flex justify-between items-center" style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
+          Dispatch History
+        </h1>
+        <span style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>
+          {total} total
+        </span>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-4">
-        <div className="w-40">
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => {
-              setStatusFilter(v ?? "all");
-              setOffset(0);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="dispatched">Dispatched</SelectItem>
-              <SelectItem value="running">Running</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-40">
-          <Select
-            value={sourceFilter}
-            onValueChange={(v) => {
-              setSourceFilter(v ?? "all");
-              setOffset(0);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Source" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sources</SelectItem>
-              <SelectItem value="manual">Manual</SelectItem>
-              <SelectItem value="linear">Linear</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Toolbar / Filters */}
+      <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+          Status:
+        </span>
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setOffset(0);
+          }}
+        >
+          <option value="all">All</option>
+          <option value="running">Running</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+          <option value="dispatched">Dispatched</option>
+        </select>
+
+        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)", marginLeft: 8 }}>
+          Source:
+        </span>
+        <select
+          value={sourceFilter}
+          onChange={(e) => {
+            setSourceFilter(e.target.value);
+            setOffset(0);
+          }}
+        >
+          <option value="all">All</option>
+          <option value="manual">Manual</option>
+          <option value="linear">Linear</option>
+        </select>
       </div>
 
       {/* List */}
       {loading ? (
-        <div className="text-sm text-muted-foreground">
+        <div style={{ color: "var(--af-text-tertiary)", fontSize: 13 }}>
           Loading dispatches...
         </div>
       ) : (
@@ -110,8 +99,8 @@ export default function DispatchesPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between" style={{ marginTop: 24 }}>
+          <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>
             Page {currentPage} of {totalPages}
           </p>
           <div className="flex gap-2">

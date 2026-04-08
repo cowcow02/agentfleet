@@ -7,12 +7,7 @@ import {
   updateLinearConfig,
   deleteLinearConfig,
 } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Copy } from "lucide-react";
 import type { LinearConfigResponse } from "@agentfleet/types";
 
 export function LinearConfig() {
@@ -20,10 +15,10 @@ export function LinearConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Form state
-  const [apiKey, setApiKey] = useState("");
+  const [apiKeyVal, setApiKeyVal] = useState("");
   const [triggerStatus, setTriggerStatus] = useState("");
   const [triggerLabels, setTriggerLabels] = useState("");
+  const [saveMsg, setSaveMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
     fetchLinearConfig()
@@ -41,6 +36,7 @@ export function LinearConfig() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setSaveMsg(null);
     try {
       const labels = triggerLabels
         .split(",")
@@ -48,17 +44,16 @@ export function LinearConfig() {
         .filter(Boolean);
 
       const result = await updateLinearConfig({
-        apiKey,
+        apiKey: apiKeyVal || undefined,
         triggerStatus,
         triggerLabels: labels,
       });
       setConfig(result);
-      setApiKey(""); // Clear API key field after save
-      toast.success("Linear integration updated");
+      setApiKeyVal("");
+      setSaveMsg({ text: "Configuration saved.", type: "success" });
+      setTimeout(() => setSaveMsg(null), 4000);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to save config",
-      );
+      setSaveMsg({ text: err instanceof Error ? err.message : "Failed to save.", type: "error" });
     } finally {
       setSaving(false);
     }
@@ -69,7 +64,7 @@ export function LinearConfig() {
     try {
       await deleteLinearConfig();
       setConfig({ configured: false });
-      setApiKey("");
+      setApiKeyVal("");
       setTriggerStatus("");
       setTriggerLabels("");
       toast.success("Linear integration removed");
@@ -80,105 +75,164 @@ export function LinearConfig() {
     }
   }
 
+  function copyText(text: string) {
+    navigator.clipboard.writeText(text).then(() => toast.success("Copied"));
+  }
+
   if (loading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-sm text-muted-foreground">Loading Linear config...</p>
-        </CardContent>
-      </Card>
+      <div className="af-section">
+        <div className="af-section-header">Linear Integration</div>
+        <div className="af-section-body">
+          <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>Loading Linear config...</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Linear Integration</CardTitle>
-            <CardDescription>
-              Configure automatic dispatching from Linear issues
-            </CardDescription>
-          </div>
-          {config?.configured && (
-            <Badge variant="default">Connected</Badge>
-          )}
+    <div className="af-section" style={{ marginBottom: 24 }}>
+      <div className="af-section-header">Linear Integration</div>
+      <div className="af-section-body">
+        {/* Connection status */}
+        <div className="flex items-center gap-2.5" style={{ marginBottom: 20, fontSize: 13 }}>
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: config?.configured ? "var(--af-success)" : "var(--af-text-tertiary)",
+              boxShadow: config?.configured ? "0 0 0 3px var(--af-success-subtle)" : "none",
+            }}
+          />
+          <span
+            style={{
+              color: config?.configured ? "var(--af-success)" : "var(--af-text-secondary)",
+            }}
+          >
+            {config?.configured ? "Connected" : "Not configured"}
+          </span>
         </div>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="linearApiKey">
-              API Key {config?.configured && "(leave blank to keep current)"}
-            </Label>
-            <Input
-              id="linearApiKey"
-              type="password"
-              placeholder="lin_api_..."
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              required={!config?.configured}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="triggerStatus">Trigger Status</Label>
-            <Input
-              id="triggerStatus"
-              placeholder="In Progress"
-              value={triggerStatus}
-              onChange={(e) => setTriggerStatus(e.target.value)}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Dispatches are triggered when an issue moves to this status
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="triggerLabels">
-              Trigger Labels (comma-separated)
-            </Label>
-            <Input
-              id="triggerLabels"
-              placeholder="agent, automated"
-              value={triggerLabels}
-              onChange={(e) => setTriggerLabels(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Only issues with at least one of these labels will be dispatched
-            </p>
-          </div>
 
-          {config?.configured && config.webhookUrl && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <Label>Webhook URL</Label>
-                <code className="block text-xs bg-muted px-3 py-2 rounded break-all">
-                  {config.webhookUrl}
-                </code>
-                <p className="text-xs text-muted-foreground">
-                  Add this URL as a webhook in your Linear workspace settings
-                </p>
+        <form onSubmit={handleSave}>
+          <div className="flex flex-col" style={{ gap: 16 }}>
+            {/* API Key + Trigger status row */}
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div className="flex flex-col" style={{ gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                  API Key {config?.configured && "(leave blank to keep current)"}
+                </label>
+                <input
+                  type="password"
+                  placeholder={config?.configured ? "lin_api_\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (saved)" : "lin_api_xxxxxxxx"}
+                  value={apiKeyVal}
+                  onChange={(e) => setApiKeyVal(e.target.value)}
+                  required={!config?.configured}
+                />
               </div>
-            </>
-          )}
+              <div className="flex flex-col" style={{ gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                  Trigger when status changes to
+                </label>
+                <select
+                  value={triggerStatus}
+                  onChange={(e) => setTriggerStatus(e.target.value)}
+                >
+                  <option value="backlog">Backlog</option>
+                  <option value="todo">Todo</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="in_review">In Review</option>
+                </select>
+              </div>
+            </div>
 
-          <div className="flex gap-2">
-            <Button type="submit" disabled={saving}>
-              {saving
-                ? "Saving..."
-                : config?.configured
-                  ? "Update"
-                  : "Connect"}
-            </Button>
-            {config?.configured && (
-              <Button type="button" variant="destructive" onClick={handleDelete}>
-                Remove
-              </Button>
+            {/* Labels */}
+            <div className="flex flex-col" style={{ gap: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                Only for labels (comma-separated)
+              </label>
+              <input
+                placeholder="agent-task, ready-to-build"
+                value={triggerLabels}
+                onChange={(e) => setTriggerLabels(e.target.value)}
+              />
+            </div>
+
+            {/* Webhook URL */}
+            {config?.configured && config.webhookUrl && (
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)", marginBottom: 8 }}>
+                  Webhook URL (configure in Linear):
+                </div>
+                <div className="af-mono-box">
+                  <span style={{ color: "var(--af-info)" }}>{config.webhookUrl}</span>
+                  <button
+                    type="button"
+                    onClick={() => copyText(config.webhookUrl!)}
+                    style={{
+                      background: "var(--background)",
+                      border: "1px solid var(--border)",
+                      color: "var(--af-text-secondary)",
+                      padding: "5px 10px",
+                      fontSize: 11,
+                      fontWeight: 500,
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
             )}
+
+            {/* Actions */}
+            <div className="flex items-center" style={{ marginTop: 2 }}>
+              <button
+                type="submit"
+                disabled={saving}
+                className="af-btn-primary"
+              >
+                {saving ? "Saving..." : "Save Configuration"}
+              </button>
+              {config?.configured && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  style={{
+                    marginLeft: 12,
+                    background: "transparent",
+                    border: "1px solid var(--af-danger-subtle)",
+                    color: "var(--af-danger)",
+                    padding: "10px 20px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Remove
+                </button>
+              )}
+              {saveMsg && (
+                <span
+                  style={{
+                    marginLeft: 16,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: saveMsg.type === "success" ? "var(--af-success)" : "var(--af-danger)",
+                  }}
+                >
+                  {saveMsg.text}
+                </span>
+              )}
+            </div>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
