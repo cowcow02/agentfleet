@@ -15,6 +15,7 @@ import { webhooksRouter } from "./routes/webhooks";
 import { webhookLogsRouter } from "./routes/webhook-logs";
 import { sseRouter } from "./routes/sse";
 import { apiKeysRouter } from "./routes/api-keys";
+import { meRouter } from "./routes/me";
 import { createWsHandler } from "./ws/handler";
 
 const app = new Hono();
@@ -40,6 +41,7 @@ app.route("", webhooksRouter);
 app.route("", webhookLogsRouter);
 app.route("", sseRouter);
 app.route("", apiKeysRouter);
+app.route("", meRouter);
 
 const port = env.PORT;
 
