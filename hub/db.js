@@ -97,7 +97,7 @@ async function init() {
 
   pool = new Pool({
     connectionString: DATABASE_URL,
-    ssl: DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : false,
+    ssl: DATABASE_URL.includes('railway.internal') ? false : (DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : false),
     max: 10,
     idleTimeoutMillis: 30000,
   });
