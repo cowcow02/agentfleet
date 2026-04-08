@@ -48,40 +48,40 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Light mode */
+/* Light mode — warm cream/beige from prototype */
 :root {
-  --background: oklch(0.985 0.002 240);
-  --foreground: oklch(0.195 0.02 240);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.195 0.02 240);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.195 0.02 240);
-  --primary: oklch(0.55 0.15 165);
-  --primary-foreground: oklch(0.98 0.005 165);
-  --secondary: oklch(0.96 0.005 240);
-  --secondary-foreground: oklch(0.195 0.02 240);
-  --muted: oklch(0.96 0.005 240);
-  --muted-foreground: oklch(0.5 0.01 240);
-  --accent: oklch(0.55 0.15 165);
-  --accent-foreground: oklch(0.98 0.005 165);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.005 240);
-  --input: oklch(0.9 0.005 240);
-  --ring: oklch(0.55 0.15 165);
-  --chart-1: oklch(0.55 0.15 165);
-  --chart-2: oklch(0.6 0.12 200);
-  --chart-3: oklch(0.5 0.1 250);
-  --chart-4: oklch(0.65 0.08 140);
-  --chart-5: oklch(0.45 0.15 280);
+  --background: #FDFBF9;
+  --foreground: #1A1A1A;
+  --card: #F5F1EC;
+  --card-foreground: #1A1A1A;
+  --popover: #F5F1EC;
+  --popover-foreground: #1A1A1A;
+  --primary: #14B8A6;
+  --primary-foreground: #FDFBF9;
+  --secondary: #EDE8E0;
+  --secondary-foreground: #1A1A1A;
+  --muted: #F0EBE4;
+  --muted-foreground: #6B6560;
+  --accent: #14B8A6;
+  --accent-foreground: #FDFBF9;
+  --destructive: #DC2626;
+  --border: #E8E2DA;
+  --input: #E8E2DA;
+  --ring: #14B8A6;
+  --chart-1: #14B8A6;
+  --chart-2: #8168E0;
+  --chart-3: #D97706;
+  --chart-4: #059669;
+  --chart-5: #DC2626;
   --radius: 0.625rem;
-  --sidebar: oklch(0.975 0.003 240);
-  --sidebar-foreground: oklch(0.195 0.02 240);
-  --sidebar-primary: oklch(0.55 0.15 165);
-  --sidebar-primary-foreground: oklch(0.98 0.005 165);
-  --sidebar-accent: oklch(0.96 0.005 240);
-  --sidebar-accent-foreground: oklch(0.195 0.02 240);
-  --sidebar-border: oklch(0.9 0.005 240);
-  --sidebar-ring: oklch(0.55 0.15 165);
+  --sidebar: #F5F1EC;
+  --sidebar-foreground: #1A1A1A;
+  --sidebar-primary: #14B8A6;
+  --sidebar-primary-foreground: #FDFBF9;
+  --sidebar-accent: rgba(20, 184, 166, 0.10);
+  --sidebar-accent-foreground: #14B8A6;
+  --sidebar-border: #F0EBE4;
+  --sidebar-ring: #14B8A6;
 }
 
 /* Dark mode — AgentFleet default */
