@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
+const db = require('./db');
 
 const PORT = process.env.PORT || 9900;
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
@@ -97,9 +98,48 @@ const webhookLog = [];              // Array<{ timestamp, teamId, action, reason
 let dispatchCounter = 0;
 
 // ---------------------------------------------------------------------------
-// Seed default team
+// Restore state from database (if available)
 // ---------------------------------------------------------------------------
-function seedData() {
+async function restoreFromDb() {
+  if (!db.isReady()) return false;
+
+  const dbTeams = await db.loadTeams();
+  const dbMembers = await db.loadMembers();
+  const dbInvites = await db.loadInvites();
+  const dbDispatches = await db.loadDispatches();
+
+  if (dbTeams.length === 0) return false; // no data — need seed
+
+  for (const t of dbTeams) {
+    const team = { ...t, members: new Map() };
+    teams.set(team.id, team);
+  }
+
+  for (const m of dbMembers) {
+    const team = teams.get(m.teamId);
+    if (!team) continue;
+    team.members.set(m.id, m);
+    membersByToken.set(m.token, { member: m, team });
+    if (m.email) membersByEmail.set(m.email, { member: m, team });
+  }
+
+  for (const inv of dbInvites) {
+    invites.set(inv.code, inv);
+  }
+
+  for (const d of dbDispatches) {
+    dispatches.push(d);
+  }
+  dispatchCounter = dispatches.length;
+
+  log(`[DB] Restored ${dbTeams.length} teams, ${dbMembers.length} members, ${dbDispatches.length} dispatches`);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Seed default team (only if no data in DB)
+// ---------------------------------------------------------------------------
+async function seedData() {
   const team = {
     id: 'team_001',
     name: 'Kipwise',
@@ -124,6 +164,12 @@ function seedData() {
   teams.set(team.id, team);
   membersByToken.set(admin.token, { member: admin, team });
   membersByEmail.set(admin.email, { member: admin, team });
+
+  // Persist to DB
+  if (db.isReady()) {
+    await db.saveTeam(team);
+    await db.saveMember(admin);
+  }
 
   log(`Seed team "${team.name}" created (id: ${team.id})`);
   log(`Admin token: ${admin.token}`);
@@ -292,6 +338,7 @@ function createDispatch(teamId, memberName, ticket, source) {
   };
 
   dispatches.push(dispatch);
+  db.saveDispatch(dispatch).catch(() => {});
   match.agent.running++;
 
   const team = teams.get(teamId);
@@ -384,6 +431,8 @@ const httpServer = http.createServer(async (req, res) => {
     team.members.set(memberId, admin);
     teams.set(teamId, team);
     membersByToken.set(adminToken, { member: admin, team });
+    db.saveTeam(team).catch(() => {});
+    db.saveMember(admin).catch(() => {});
 
     log(`Team "${team.name}" created (id: ${teamId})`);
 
@@ -404,6 +453,7 @@ const httpServer = http.createServer(async (req, res) => {
       const entry = { timestamp: new Date().toISOString(), teamId, action, reason, ticket: ticket || null, dispatch_id: dispatchId || null };
       webhookLog.unshift(entry);
       if (webhookLog.length > 200) webhookLog.pop();
+      db.saveWebhookEvent(entry).catch(() => {});
       log(`[Webhook] team=${teamId} action=${action} reason=${reason || '-'} ticket=${ticket?.id || '-'}`);
     }
 
@@ -515,6 +565,8 @@ const httpServer = http.createServer(async (req, res) => {
     teams.set(teamId, team);
     membersByToken.set(apiToken, { member, team });
     membersByEmail.set(member.email, { member, team });
+    db.saveTeam(team).catch(() => {});
+    db.saveMember(member).catch(() => {});
 
     const sessionToken = createSessionToken(memberId, teamId);
 
@@ -579,6 +631,7 @@ const httpServer = http.createServer(async (req, res) => {
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
     });
+    db.saveInvite({ code: inviteCode, teamId: auth.team.id, email, role, createdAt: now.toISOString(), expiresAt: expiresAt.toISOString() }).catch(() => {});
 
     const hubUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
     const inviteUrl = `${hubUrl}/?invite=${inviteCode}`;
@@ -631,9 +684,11 @@ const httpServer = http.createServer(async (req, res) => {
     team.members.set(memberId, member);
     membersByToken.set(apiToken, { member, team });
     if (email) membersByEmail.set(email, { member, team });
+    db.saveMember(member).catch(() => {});
 
     // Consume the invite
     invites.delete(inviteCode);
+    db.deleteInvite(inviteCode).catch(() => {});
 
     const sessionToken = createSessionToken(memberId, team.id);
 
@@ -826,6 +881,7 @@ const httpServer = http.createServer(async (req, res) => {
       team.members.set(newId, newMember);
       membersByToken.set(newToken, { member: newMember, team });
       if (email) membersByEmail.set(email, { member: newMember, team });
+      db.saveMember(newMember).catch(() => {});
 
       log(`[${team.name}] Member "${newMember.name}" added (role: ${role})`);
 
@@ -863,6 +919,7 @@ const httpServer = http.createServer(async (req, res) => {
       }
 
       team.members.delete(targetId);
+      db.deleteMember(targetId).catch(() => {});
       log(`[${team.name}] Member "${target.name}" removed by ${member.name}`);
 
       return json(res, 200, { ok: true });
@@ -896,6 +953,7 @@ const httpServer = http.createServer(async (req, res) => {
         triggerStatus: body.triggerStatus || '',
         triggerLabels: body.triggerLabels || [],
       };
+      db.updateLinearConfig(team.id, team.linearConfig).catch(() => {});
 
       const webhookUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}/webhooks/linear/${team.id}`;
 
@@ -1054,6 +1112,7 @@ wss.on('connection', (ws) => {
         dispatch.status = 'running';
         dispatch.updated_at = msg.timestamp;
         dispatch.messages.push({ message: msg.message, timestamp: msg.timestamp });
+        db.saveDispatch(dispatch).catch(() => {});
         log(`Status ${msg.dispatch_id}: "${msg.message}" (${elapsed}s since dispatch)`);
       }
       return;
@@ -1067,6 +1126,7 @@ wss.on('connection', (ws) => {
         dispatch.exit_code = msg.exit_code;
         dispatch.duration_seconds = msg.duration_seconds || 0;
         dispatch.updated_at = new Date().toISOString();
+        db.saveDispatch(dispatch).catch(() => {});
         log(`Complete ${msg.dispatch_id}: ${dispatch.status} (exit ${msg.exit_code}, ${dispatch.duration_seconds}s)`);
 
         // Decrement running count
@@ -1115,10 +1175,20 @@ process.on('SIGTERM', shutdown);
 // ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
-seedData();
+(async () => {
+  // Initialize database (if DATABASE_URL is set)
+  await db.init();
 
-httpServer.listen(PORT, () => {
-  log(`Hub listening on http://localhost:${PORT} (HTTP + WebSocket)`);
-  log(`Default admin token: afm_charlie_001`);
-  log(`Default login: charlie@kipwise.com / admin123`);
-});
+  // Restore from DB, or seed if empty
+  const restored = await restoreFromDb();
+  if (!restored) {
+    await seedData();
+  }
+
+  httpServer.listen(PORT, () => {
+    log(`Hub listening on http://localhost:${PORT} (HTTP + WebSocket)`);
+    log(`Database: ${db.isReady() ? 'PostgreSQL (persistent)' : 'In-memory (ephemeral)'}`);
+    log(`Default admin token: afm_charlie_001`);
+    log(`Default login: charlie@kipwise.com / admin123`);
+  });
+})();

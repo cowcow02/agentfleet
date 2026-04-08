@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soft Studio — Palette Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; background: #1a1a1a; color: #e0e0e0; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #fff; }
+  .subtitle { color: #999; margin-bottom: 32px; font-size: 14px; }
+
+  .themes { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+  .theme-card { border-radius: 16px; overflow: hidden; border: 1px solid #333; }
+  .theme-label { padding: 12px 20px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Light theme card */
+  .light-card { background: #FDFBF9; }
+  .light-card .theme-label { background: #F5F1EC; color: #3D3A36; border-bottom: 1px solid #E8E2DA; }
+
+  /* Dark theme card */
+  .dark-card { background: #222228; }
+  .dark-card .theme-label { background: #2C2C33; color: #B0B0B8; border-bottom: 1px solid #38383F; }
+
+  /* Palette swatches */
+  .palette { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .swatch-row { display: flex; gap: 8px; align-items: center; }
+  .swatch { width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.08); }
+  .swatch-info { font-size: 12px; line-height: 1.4; }
+  .swatch-name { font-weight: 600; }
+  .swatch-hex { font-family: 'SF Mono', monospace; font-size: 11px; opacity: 0.6; }
+
+  .light-card .swatch-info { color: #3D3A36; }
+  .light-card .swatch-hex { color: #8A8580; }
+  .dark-card .swatch-info { color: #D0D0D8; }
+  .dark-card .swatch-hex { color: #707078; }
+
+  .divider { height: 1px; margin: 4px 0; }
+  .light-card .divider { background: #E8E2DA; }
+  .dark-card .divider { background: #38383F; }
+
+  /* Mini dashboard mockup */
+  .mockup-section { margin-bottom: 32px; }
+  .mockup-section h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #fff; }
+  .mockup-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+  /* Light mockup */
+  .mock-dash { border-radius: 12px; overflow: hidden; border: 1px solid #333; display: grid; grid-template-columns: 180px 1fr; min-height: 360px; }
+  .mock-sidebar-l { background: #F5F1EC; padding: 20px 14px; border-right: 1px solid #E8E2DA; }
+  .mock-sidebar-d { background: #2C2C33; padding: 20px 14px; border-right: 1px solid #38383F; }
+  .mock-brand { font-size: 14px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+  .mock-brand-icon { width: 18px; height: 18px; border-radius: 4px; }
+  .mock-nav-item { padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; margin-bottom: 2px; cursor: default; }
+
+  .mock-main-l { background: #FDFBF9; padding: 24px; }
+  .mock-main-d { background: #222228; padding: 24px; }
+  .mock-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .mock-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .mock-stat { padding: 14px; border-radius: 10px; }
+  .mock-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; margin-bottom: 4px; }
+  .mock-stat-value { font-size: 22px; font-weight: 700; font-feature-settings: 'tnum'; }
+
+  .mock-panel { border-radius: 10px; overflow: hidden; }
+  .mock-panel-header { padding: 12px 14px; font-size: 12px; font-weight: 600; }
+  .mock-panel-body { padding: 8px; }
+  .mock-agent { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; font-size: 12px; }
+  .mock-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .mock-agent-name { font-weight: 600; }
+  .mock-tag { font-size: 10px; padding: 2px 8px; border-radius: 100px; font-weight: 500; }
+
+  /* Light-specific mock colors */
+  .mock-sidebar-l .mock-brand { color: #3D3A36; }
+  .mock-sidebar-l .mock-brand-icon { background: #14B8A6; }
+  .mock-sidebar-l .mock-nav-item { color: #8A8580; }
+  .mock-sidebar-l .mock-nav-item.active { background: rgba(20,184,166,0.1); color: #0D9488; }
+
+  .mock-main-l .mock-title { color: #1A1A1A; }
+  .mock-main-l .mock-stat { background: #F5F1EC; border: 1px solid #E8E2DA; }
+  .mock-main-l .mock-stat-label { color: #8A8580; }
+  .mock-main-l .mock-panel { background: #F5F1EC; border: 1px solid #E8E2DA; }
+  .mock-main-l .mock-panel-header { color: #3D3A36; border-bottom: 1px solid #E8E2DA; }
+  .mock-main-l .mock-agent { color: #3D3A36; }
+  .mock-main-l .mock-agent:hover { background: rgba(0,0,0,0.03); }
+  .mock-main-l .mock-agent-name { color: #1A1A1A; }
+  .mock-main-l .mock-tag.be { background: rgba(91,155,240,0.12); color: #3B7DD8; }
+  .mock-main-l .mock-tag.fe { background: rgba(20,184,166,0.1); color: #0D9488; }
+  .mock-main-l .mock-tag.bug { background: rgba(220,80,70,0.1); color: #C53030; }
+
+  /* Dark-specific mock colors */
+  .mock-sidebar-d .mock-brand { color: #D0D0D8; }
+  .mock-sidebar-d .mock-brand-icon { background: #14B8A6; }
+  .mock-sidebar-d .mock-nav-item { color: #707078; }
+  .mock-sidebar-d .mock-nav-item.active { background: rgba(20,184,166,0.12); color: #2DD4BF; }
+
+  .mock-main-d .mock-title { color: #E8E8F0; }
+  .mock-main-d .mock-stat { background: #2C2C33; border: 1px solid #38383F; }
+  .mock-main-d .mock-stat-label { color: #707078; }
+  .mock-main-d .mock-panel { background: #2C2C33; border: 1px solid #38383F; }
+  .mock-main-d .mock-panel-header { color: #B0B0B8; border-bottom: 1px solid #38383F; }
+  .mock-main-d .mock-agent { color: #B0B0B8; }
+  .mock-main-d .mock-agent:hover { background: rgba(255,255,255,0.03); }
+  .mock-main-d .mock-agent-name { color: #E8E8F0; }
+  .mock-main-d .mock-tag.be { background: rgba(91,155,240,0.12); color: #5B9BF0; }
+  .mock-main-d .mock-tag.fe { background: rgba(20,184,166,0.12); color: #2DD4BF; }
+  .mock-main-d .mock-tag.bug { background: rgba(229,72,77,0.12); color: #F87171; }
+
+  /* Status colors */
+  .status-section { margin-top: 32px; }
+  .status-section h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #fff; }
+  .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .status-card { border-radius: 12px; padding: 20px; }
+  .status-card-l { background: #FDFBF9; border: 1px solid #E8E2DA; }
+  .status-card-d { background: #222228; border: 1px solid #38383F; }
+  .status-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .status-pill { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 100px; }
+  .status-label { font-size: 12px; flex: 1; }
+
+  /* Light status */
+  .status-card-l .status-label { color: #3D3A36; }
+  .dot-online-l { background: #10B981; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+  .dot-busy-l { background: #D97706; box-shadow: 0 0 0 3px rgba(217,119,6,0.12); }
+  .dot-offline-l { background: #9CA3AF; }
+  .pill-online-l { background: rgba(16,185,129,0.12); color: #059669; }
+  .pill-busy-l { background: rgba(217,119,6,0.1); color: #B45309; }
+  .pill-error-l { background: rgba(220,80,70,0.1); color: #C53030; }
+  .pill-info-l { background: rgba(59,125,216,0.1); color: #2563EB; }
+
+  /* Dark status */
+  .status-card-d .status-label { color: #B0B0B8; }
+  .dot-online-d { background: #34D399; box-shadow: 0 0 0 3px rgba(52,211,153,0.15); }
+  .dot-busy-d { background: #FBBF24; box-shadow: 0 0 0 3px rgba(251,191,36,0.12); }
+  .dot-offline-d { background: #5C6070; }
+  .pill-online-d { background: rgba(52,211,153,0.12); color: #34D399; }
+  .pill-busy-d { background: rgba(251,191,36,0.1); color: #FBBF24; }
+  .pill-error-d { background: rgba(248,113,113,0.12); color: #F87171; }
+  .pill-info-d { background: rgba(91,155,240,0.12); color: #5B9BF0; }
+
+  .note { margin-top: 32px; padding: 16px 20px; background: #2a2a2a; border-radius: 10px; border: 1px solid #333; font-size: 13px; color: #aaa; line-height: 1.6; }
+  .note strong { color: #ddd; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Soft Studio — Color System</h1>
+<p class="subtitle">Light theme (default) + softened dark theme. Teal accent. Auto-detects OS preference with manual toggle.</p>
+
+<!-- Palette swatches -->
+<div class="themes">
+  <div class="theme-card light-card">
+    <div class="theme-label">Light Theme</div>
+    <div class="palette">
+      <div class="swatch-row">
+        <div class="swatch" style="background:#FDFBF9"></div>
+        <div class="swatch-info"><div class="swatch-name">Background</div><div class="swatch-hex">#FDFBF9</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#F5F1EC"></div>
+        <div class="swatch-info"><div class="swatch-name">Surface</div><div class="swatch-hex">#F5F1EC</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#E8E2DA"></div>
+        <div class="swatch-info"><div class="swatch-name">Border</div><div class="swatch-hex">#E8E2DA</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#1A1A1A"></div>
+        <div class="swatch-info"><div class="swatch-name">Text Primary</div><div class="swatch-hex">#1A1A1A</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#6B6560"></div>
+        <div class="swatch-info"><div class="swatch-name">Text Secondary</div><div class="swatch-hex">#6B6560</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#8A8580"></div>
+        <div class="swatch-info"><div class="swatch-name">Text Tertiary</div><div class="swatch-hex">#8A8580</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#14B8A6"></div>
+        <div class="swatch-info"><div class="swatch-name">Accent (Teal)</div><div class="swatch-hex">#14B8A6</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#0D9488"></div>
+        <div class="swatch-info"><div class="swatch-name">Accent Hover</div><div class="swatch-hex">#0D9488</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="theme-card dark-card">
+    <div class="theme-label">Dark Theme</div>
+    <div class="palette">
+      <div class="swatch-row">
+        <div class="swatch" style="background:#222228; border-color: #38383F;"></div>
+        <div class="swatch-info"><div class="swatch-name">Background</div><div class="swatch-hex">#222228</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#2C2C33; border-color: #38383F;"></div>
+        <div class="swatch-info"><div class="swatch-name">Surface</div><div class="swatch-hex">#2C2C33</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#38383F; border-color: #444;"></div>
+        <div class="swatch-info"><div class="swatch-name">Border</div><div class="swatch-hex">#38383F</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#E8E8F0; border-color: #38383F;"></div>
+        <div class="swatch-info"><div class="swatch-name">Text Primary</div><div class="swatch-hex">#E8E8F0</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#9090A0; border-color: #38383F;"></div>
+        <div class="swatch-info"><div class="swatch-name">Text Secondary</div><div class="swatch-hex">#9090A0</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#707078; border-color: #38383F;"></div>
+        <div class="swatch-info"><div class="swatch-name">Text Tertiary</div><div class="swatch-hex">#707078</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#2DD4BF; border-color: #38383F;"></div>
+        <div class="swatch-info"><div class="swatch-name">Accent (Teal)</div><div class="swatch-hex">#2DD4BF</div></div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#5EEAD4; border-color: #38383F;"></div>
+        <div class="swatch-info"><div class="swatch-name">Accent Hover</div><div class="swatch-hex">#5EEAD4</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard Mockups -->
+<div class="mockup-section">
+  <h2>Dashboard Preview</h2>
+  <div class="mockup-row">
+    <!-- Light dashboard -->
+    <div class="mock-dash">
+      <div class="mock-sidebar-l">
+        <div class="mock-brand"><div class="mock-brand-icon"></div> AgentFleet</div>
+        <div class="mock-nav-item active">Dashboard</div>
+        <div class="mock-nav-item">Agents</div>
+        <div class="mock-nav-item">Dispatches</div>
+        <div class="mock-nav-item">Settings</div>
+      </div>
+      <div class="mock-main-l">
+        <div class="mock-title">Dashboard</div>
+        <div class="mock-stats">
+          <div class="mock-stat">
+            <div class="mock-stat-label">Online</div>
+            <div class="mock-stat-value" style="color:#059669">4</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-label">Dispatches</div>
+            <div class="mock-stat-value" style="color:#2563EB">12</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-label">Success Rate</div>
+            <div class="mock-stat-value" style="color:#0D9488">94%</div>
+          </div>
+        </div>
+        <div class="mock-panel">
+          <div class="mock-panel-header">Active Agents</div>
+          <div class="mock-panel-body">
+            <div class="mock-agent">
+              <div class="mock-dot dot-online-l"></div>
+              <div><span class="mock-agent-name">claude-agent-1</span></div>
+              <div style="margin-left:auto; display:flex; gap:4px;">
+                <span class="mock-tag be">backend</span>
+                <span class="mock-tag fe">frontend</span>
+              </div>
+            </div>
+            <div class="mock-agent">
+              <div class="mock-dot dot-busy-l"></div>
+              <div><span class="mock-agent-name">claude-agent-2</span></div>
+              <div style="margin-left:auto; display:flex; gap:4px;">
+                <span class="mock-tag bug">bug</span>
+              </div>
+            </div>
+            <div class="mock-agent">
+              <div class="mock-dot dot-online-l"></div>
+              <div><span class="mock-agent-name">codex-agent-1</span></div>
+              <div style="margin-left:auto; display:flex; gap:4px;">
+                <span class="mock-tag fe">frontend</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark dashboard -->
+    <div class="mock-dash">
+      <div class="mock-sidebar-d">
+        <div class="mock-brand"><div class="mock-brand-icon"></div> AgentFleet</div>
+        <div class="mock-nav-item active">Dashboard</div>
+        <div class="mock-nav-item">Agents</div>
+        <div class="mock-nav-item">Dispatches</div>
+        <div class="mock-nav-item">Settings</div>
+      </div>
+      <div class="mock-main-d">
+        <div class="mock-title">Dashboard</div>
+        <div class="mock-stats">
+          <div class="mock-stat">
+            <div class="mock-stat-label">Online</div>
+            <div class="mock-stat-value" style="color:#34D399">4</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-label">Dispatches</div>
+            <div class="mock-stat-value" style="color:#5B9BF0">12</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-label">Success Rate</div>
+            <div class="mock-stat-value" style="color:#2DD4BF">94%</div>
+          </div>
+        </div>
+        <div class="mock-panel">
+          <div class="mock-panel-header">Active Agents</div>
+          <div class="mock-panel-body">
+            <div class="mock-agent">
+              <div class="mock-dot dot-online-d"></div>
+              <div><span class="mock-agent-name">claude-agent-1</span></div>
+              <div style="margin-left:auto; display:flex; gap:4px;">
+                <span class="mock-tag be">backend</span>
+                <span class="mock-tag fe">frontend</span>
+              </div>
+            </div>
+            <div class="mock-agent">
+              <div class="mock-dot dot-busy-d"></div>
+              <div><span class="mock-agent-name">claude-agent-2</span></div>
+              <div style="margin-left:auto; display:flex; gap:4px;">
+                <span class="mock-tag bug">bug</span>
+              </div>
+            </div>
+            <div class="mock-agent">
+              <div class="mock-dot dot-online-d"></div>
+              <div><span class="mock-agent-name">codex-agent-1</span></div>
+              <div style="margin-left:auto; display:flex; gap:4px;">
+                <span class="mock-tag fe">frontend</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status colors -->
+<div class="status-section">
+  <h2>Status Colors</h2>
+  <div class="status-grid">
+    <div class="status-card status-card-l">
+      <div class="status-row">
+        <div class="status-dot dot-online-l"></div>
+        <div class="status-label">Online</div>
+        <span class="status-pill pill-online-l">completed</span>
+      </div>
+      <div class="status-row">
+        <div class="status-dot dot-busy-l"></div>
+        <div class="status-label">Busy</div>
+        <span class="status-pill pill-busy-l">running</span>
+      </div>
+      <div class="status-row">
+        <div class="status-dot dot-offline-l"></div>
+        <div class="status-label">Offline</div>
+        <span class="status-pill pill-error-l">failed</span>
+      </div>
+      <div class="status-row">
+        <div class="status-dot" style="background:#2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.12);"></div>
+        <div class="status-label">Info</div>
+        <span class="status-pill pill-info-l">dispatched</span>
+      </div>
+    </div>
+    <div class="status-card status-card-d">
+      <div class="status-row">
+        <div class="status-dot dot-online-d"></div>
+        <div class="status-label">Online</div>
+        <span class="status-pill pill-online-d">completed</span>
+      </div>
+      <div class="status-row">
+        <div class="status-dot dot-busy-d"></div>
+        <div class="status-label">Busy</div>
+        <span class="status-pill pill-busy-d">running</span>
+      </div>
+      <div class="status-row">
+        <div class="status-dot dot-offline-d"></div>
+        <div class="status-label">Offline</div>
+        <span class="status-pill pill-error-d">failed</span>
+      </div>
+      <div class="status-row">
+        <div class="status-dot" style="background:#5B9BF0; box-shadow: 0 0 0 3px rgba(91,155,240,0.12);"></div>
+        <div class="status-label">Info</div>
+        <span class="status-pill pill-info-d">dispatched</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <strong>Design section 1: Color System & Layout.</strong> This shows the full palette, a dashboard mockup in both themes, and the semantic status colors.
+  The light theme is warm off-white with darker teal accents for contrast. The dark theme is lifted to #222228 (much lighter than the current #0f1117) with brighter teal accents for readability.
+  Status colors are slightly adjusted per theme for optimal contrast on each background.
+</div>
+
+</div>
+</body>
+</html>
