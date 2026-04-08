@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "@/lib/auth-client";
+import { signIn, organization } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,11 @@ export default function LoginPage() {
       if (result.error) {
         setError(result.error.message ?? "Login failed");
       } else {
+        // Set active organization (required for org-scoped API calls)
+        const orgs = await organization.list();
+        if (orgs.data && orgs.data.length > 0) {
+          await organization.setActive({ organizationId: orgs.data[0].id });
+        }
         router.push("/dashboard");
       }
     } catch {
