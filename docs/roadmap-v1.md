@@ -1,6 +1,6 @@
 # AgentFleet v1 — Product Roadmap
 
-**Last updated:** 2026-04-08
+**Last updated:** 2026-04-09
 **Linear project:** [AgentFleet v1](https://linear.app/agentfleet/project/agentfleet-v1-c923d717bfd6)
 
 ## Vision
@@ -14,9 +14,11 @@ Phase 1: Foundation          Phase 2: Intelligence         Phase 3: Scale & Dist
 ─────────────────────        ──────────────────────        ─────────────────────────────
 AGE-5  Projects               AGE-13 Workflow engine        AGE-12 Jira integration
 AGE-9  Project-level config   AGE-17 Member mapping         AGE-14 Batch dispatch
-AGE-10 OTLP receiver          AGE-7  Team analytics         AGE-15 CLI distribution
-AGE-11 JSONL tailing           AGE-6  Dashboard redesign     AGE-16 Daemon setup UX
-                               AGE-8  Manual dispatch modal
+AGE-10 OTLP receiver          AGE-7  Team analytics         AGE-18 Telemetry idle detection
+AGE-11 JSONL tailing           AGE-6  Dashboard redesign     AGE-15 CLI distribution
+                               AGE-8  Manual dispatch modal  AGE-16 Daemon setup UX
+                                                             AGE-19 Agent-agnostic runtime
+                                                             AGE-20 Rich CLI
 ```
 
 ---
@@ -68,13 +70,15 @@ Build the smart dispatch and analytics layer on top of the foundation.
 
 ## Phase 3: Scale & Distribution
 
-Extend platform reach with Jira support, batch dispatch, and public CLI distribution.
+Extend platform reach with multi-runtime support, Jira, batch dispatch, and public CLI distribution.
 
 | Ticket | Title | Priority | Blocked by |
 |--------|-------|----------|------------|
 | AGE-12 | Add Jira integration | Medium | AGE-5, AGE-9 |
 | AGE-14 | Daemon-side batch dispatch | Medium | — |
 | AGE-18 | Telemetry-driven idle detection | Medium | AGE-11 |
+| AGE-19 | Agent-agnostic runtime support | Medium | — |
+| AGE-20 | Rich CLI with JSON output and query commands | Medium | — |
 | AGE-15 | CLI public distribution via shell installer | Medium | — |
 | AGE-16 | Improve daemon setup instructions | Low | AGE-15 |
 
@@ -84,11 +88,15 @@ Extend platform reach with Jira support, batch dispatch, and public CLI distribu
 
 **AGE-18** replaces the current CPU-based idle detection (best-effort, unreliable) with telemetry-driven detection. Uses JSONL transcript activity and OTLP event flow to accurately distinguish between waiting for human, waiting for API, genuinely idle, and finished states.
 
-**AGE-15** packages the CLI as standalone binaries (macOS/Linux, x64/arm64) distributed via `curl -fsSL https://get.agentfleet.dev | sh`. GitHub Actions builds and publishes to GitHub Releases on version tags.
+**AGE-19** makes the daemon pluggable for different AI agent runtimes (Claude Code, Codex, Aider, custom scripts). Each agent declares its runtime in `agents.yaml`. OTLP telemetry provides a runtime-agnostic data path — any agent emitting OTel spans gets metrics for free.
+
+**AGE-20** expands the CLI into a full operational interface: query dispatches, view telemetry, manage projects and workflows. `--format json` on every command for pipe-composability and CI/CD integration.
+
+**AGE-15** packages the CLI as standalone binaries (macOS/Linux, x64/arm64) distributed via `curl -fsSL https://get.agentfleet.dev | sh`.
 
 **AGE-16** improves the post-install onboarding: setup wizard, config validation, and clear documentation.
 
-**Exit criteria:** Platform supports both Linear and Jira teams, advanced users can batch tickets, idle detection is accurate, and anyone can install the CLI with a one-liner.
+**Exit criteria:** Platform supports multiple agent runtimes and both Linear and Jira teams, advanced users can batch tickets, idle detection is accurate, CLI is a full operational tool, and anyone can install with a one-liner.
 
 ---
 
@@ -108,6 +116,8 @@ AGE-11 (JSONL) ──┤
 AGE-6 (dashboard redesign)
 AGE-8 (manual dispatch modal)
 AGE-14 (batch dispatch)
+AGE-19 (agent-agnostic runtime)
+AGE-20 (rich CLI)
 
 AGE-15 (CLI distribution)
   └── AGE-16 (setup UX)
@@ -118,7 +128,7 @@ AGE-15 (CLI distribution)
 Three independent tracks can proceed simultaneously:
 
 1. **Data model track:** AGE-5 -> AGE-9 -> AGE-13/AGE-12
-2. **Telemetry track:** AGE-10 + AGE-11 -> AGE-7
-3. **Distribution track:** AGE-15 -> AGE-16
+2. **Telemetry track:** AGE-10 + AGE-11 -> AGE-7/AGE-18
+3. **Distribution track:** AGE-15 -> AGE-16, AGE-19, AGE-20
 
 The dashboard work (AGE-6, AGE-8) can start anytime but benefits from having the telemetry and workflow engine in place.
