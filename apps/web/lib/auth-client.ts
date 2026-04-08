@@ -9,10 +9,10 @@ export const authClient = createAuthClient({
 
 export const { useSession, signIn, signUp, signOut, organization } = authClient;
 
-// API key management via direct REST calls (not available as client plugin)
+// API key management via direct REST calls
 export const apiKey = {
   async listApiKeys() {
-    const res = await fetch(`/api/auth/api-key/list`, {
+    const res = await fetch(`/api/api-keys/list`, {
       credentials: "include",
     });
     if (!res.ok) return { data: null, error: { message: "Failed to list API keys" } };
@@ -20,7 +20,7 @@ export const apiKey = {
     return { data, error: null };
   },
   async createApiKey(params: { name: string; expiresIn?: number }) {
-    const res = await fetch(`/api/auth/api-key/create`, {
+    const res = await fetch(`/api/api-keys/create`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -31,7 +31,7 @@ export const apiKey = {
     return { data, error: null };
   },
   async deleteApiKey(params: { keyId: string }) {
-    const res = await fetch(`/api/auth/api-key/delete`, {
+    const res = await fetch(`/api/api-keys/delete`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

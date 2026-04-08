@@ -39,20 +39,14 @@ export const dispatches = pgTable(
       .default("dispatched"),
     exitCode: integer("exit_code"),
     durationMs: integer("duration_ms"),
-    messages: jsonb("messages")
-      .$type<{ message: string; timestamp: string }[]>()
-      .default([]),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    messages: jsonb("messages").$type<{ message: string; timestamp: string }[]>().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("idx_dispatches_org").on(table.organizationId),
     index("idx_dispatches_status").on(table.status),
-  ]
+  ],
 );
 
 // --- integrations ---
@@ -64,19 +58,29 @@ export const integrations = pgTable(
     organizationId: text("organization_id").notNull(),
     type: text("type", { enum: ["linear"] }).notNull(),
     config: jsonb("config").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("idx_integrations_org_type").on(table.organizationId, table.type)],
+);
+
+// --- api_keys ---
+
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    keyHash: text("key_hash").notNull(),
+    prefix: text("prefix").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("idx_integrations_org_type").on(
-      table.organizationId,
-      table.type
-    ),
-  ]
+    index("idx_api_keys_org").on(table.organizationId),
+    uniqueIndex("idx_api_keys_hash").on(table.keyHash),
+  ],
 );
 
 // --- webhook_logs ---
@@ -91,9 +95,7 @@ export const webhookLogs = pgTable(
     reason: text("reason"),
     payload: jsonb("payload"),
     dispatchId: uuid("dispatch_id").references(() => dispatches.id),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [index("idx_webhook_logs_org").on(table.organizationId)]
+  (table) => [index("idx_webhook_logs_org").on(table.organizationId)],
 );

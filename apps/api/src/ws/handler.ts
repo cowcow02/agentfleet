@@ -3,12 +3,8 @@ import type { Duplex } from "node:stream";
 import { WebSocketServer, WebSocket } from "ws";
 import { DaemonMessage } from "@agentfleet/types";
 import { auth } from "../auth";
-import {
-  registerMachine,
-  removeMachine,
-  updateHeartbeat,
-  getMachineByWs,
-} from "../lib/machines";
+import { resolveApiKey } from "../lib/api-key-auth";
+import { registerMachine, removeMachine, updateHeartbeat, getMachineByWs } from "../lib/machines";
 import { appendDispatchMessage, completeDispatch } from "../lib/dispatch";
 import { eventBus } from "../lib/events";
 import { getAgentsForOrg, getMachineCountForOrg } from "../lib/machines";
@@ -19,11 +15,7 @@ import { getAgentsForOrg, getMachineCountForOrg } from "../lib/machines";
  * The bearer plugin converts the token to a session lookup.
  */
 export function createWsHandler(wss: WebSocketServer) {
-  return async function handleUpgrade(
-    req: IncomingMessage,
-    socket: Duplex,
-    head: Buffer
-  ) {
+  return async function handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer) {
     // Authenticate via Bearer token (session token or API key)
     const authHeader = req.headers["authorization"];
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -33,24 +25,32 @@ export function createWsHandler(wss: WebSocketServer) {
     }
 
     let orgId: string | undefined;
+    const token = authHeader.slice(7);
 
     try {
-      // Build headers object for Better Auth session lookup
-      const headers = new Headers();
-      for (const [key, value] of Object.entries(req.headers)) {
-        if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
+      // Try custom API key first (afk_*)
+      if (token.startsWith("afk_")) {
+        const result = await resolveApiKey(token);
+        if (result) {
+          orgId = result.organizationId;
+        }
       }
 
-      const session = await auth.api.getSession({ headers });
-      if (!session) {
-        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
-        socket.destroy();
-        return;
-      }
-
-      orgId = (session.session as any).activeOrganizationId;
+      // Fall back to Better Auth session lookup
       if (!orgId) {
-        socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+        const headers = new Headers();
+        for (const [key, value] of Object.entries(req.headers)) {
+          if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
+        }
+
+        const session = await auth.api.getSession({ headers });
+        if (session) {
+          orgId = (session.session as any).activeOrganizationId;
+        }
+      }
+
+      if (!orgId) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
         socket.destroy();
         return;
       }
@@ -97,10 +97,10 @@ function handleConnection(ws: WebSocket, orgId: string) {
             type: "registered",
             machine: msg.machine,
             agents: msg.agents.length,
-          })
+          }),
         );
         console.log(
-          `[WS] Registered ${msg.machine} with ${msg.agents.length} agents (org: ${orgId})`
+          `[WS] Registered ${msg.machine} with ${msg.agents.length} agents (org: ${orgId})`,
         );
         break;
       }
@@ -137,12 +137,7 @@ function handleConnection(ws: WebSocket, orgId: string) {
         }
 
         // duration_seconds -> duration_ms conversion happens in completeDispatch
-        await completeDispatch(
-          msg.dispatch_id,
-          msg.success,
-          msg.exit_code,
-          msg.duration_seconds
-        );
+        await completeDispatch(msg.dispatch_id, msg.success, msg.exit_code, msg.duration_seconds);
         ws.send(JSON.stringify({ type: "ack", dispatch_id: msg.dispatch_id }));
         break;
       }

@@ -8,6 +8,13 @@
       "when": 1775668153609,
       "tag": "0000_careless_darwin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775671502119,
+      "tag": "0001_aromatic_skrulls",
+      "breakpoints": true
     }
   ]
 }
