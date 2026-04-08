@@ -10,9 +10,24 @@ meRouter.get("/api/me", async (c) => {
   const user = c.get("user") as { id: string; name?: string; email?: string };
   const orgId = c.get("organizationId") as string;
 
+  // If user details are minimal (API key auth), look up full user record
+  let userName = user.name;
+  let userEmail = user.email;
+  if (!userName || !userEmail) {
+    const [fullUser] = await db
+      .select({ name: authSchema.user.name, email: authSchema.user.email })
+      .from(authSchema.user)
+      .where(eq(authSchema.user.id, user.id))
+      .limit(1);
+    if (fullUser) {
+      userName = fullUser.name;
+      userEmail = fullUser.email;
+    }
+  }
+
   if (!orgId) {
     return c.json({
-      member: { name: user.name, email: user.email },
+      member: { name: userName, email: userEmail },
       team: null,
     });
   }
@@ -32,8 +47,8 @@ meRouter.get("/api/me", async (c) => {
 
   return c.json({
     member: {
-      name: user.name,
-      email: user.email,
+      name: userName,
+      email: userEmail,
       role: membership?.role ?? "member",
     },
     team: {
