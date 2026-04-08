@@ -1,0 +1,13 @@
+{
+  "name": "agentfleet-daemon",
+  "version": "0.1.0",
+  "description": "AgentFleet Daemon - agent registration and execution",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "js-yaml": "^4.1.0"
+  }
+}

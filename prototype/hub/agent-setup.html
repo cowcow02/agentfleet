@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentFleet — Agent Setup</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --surface3: #222233;
+    --border: #2a2a3a;
+    --text: #e0e0e8;
+    --text-dim: #6a6a80;
+    --green: #34d399;
+    --green-dim: #064e3b;
+    --yellow: #fbbf24;
+    --yellow-dim: #78350f;
+    --red: #f87171;
+    --red-dim: #7f1d1d;
+    --blue: #60a5fa;
+    --blue-dim: #1e3a5f;
+    --purple: #a78bfa;
+    --cyan: #22d3ee;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 20px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  header h1 span { color: var(--purple); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .nav-link {
+    color: var(--purple);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    transition: opacity 0.15s;
+  }
+
+  .nav-link:hover { opacity: 0.75; }
+
+  /* Section */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .section-body {
+    padding: 16px;
+  }
+
+  /* Forms */
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .form-group input, .form-group select, .form-group textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+  }
+
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--purple);
+  }
+
+  .form-group textarea {
+    resize: vertical;
+    min-height: 60px;
+    line-height: 1.5;
+    tab-size: 2;
+  }
+
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    opacity: 0.7;
+  }
+
+  button {
+    background: var(--purple);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--text-dim);
+    padding: 2px 8px;
+    font-size: 16px;
+    border: 1px solid transparent;
+  }
+  .btn-danger:hover {
+    color: var(--red);
+    border-color: var(--red-dim);
+  }
+
+  .btn-add {
+    width: 100%;
+    padding: 10px;
+    background: var(--surface2);
+    color: var(--text-dim);
+    border: 1px dashed var(--border);
+    margin-top: 8px;
+  }
+
+  .btn-add:hover {
+    border-color: var(--purple);
+    color: var(--purple);
+  }
+
+  /* Agent card */
+  .agent-builder-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  .agent-builder-card:hover { border-color: #3a3a4a; }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--purple);
+  }
+
+  /* Tag input */
+  .tag-input-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    min-height: 36px;
+    cursor: text;
+  }
+
+  .tag-input-wrapper:focus-within { border-color: var(--purple); }
+
+  .tag-input-wrapper .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--blue);
+  }
+
+  .tag-chip .tag-remove {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1;
+  }
+  .tag-chip .tag-remove:hover { color: var(--red); }
+
+  .tag-input-wrapper input {
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+    flex: 1;
+    min-width: 60px;
+    padding: 2px;
+  }
+
+  /* Claude config panel */
+  .config-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+
+  .config-panel-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--cyan);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 4px;
+  }
+
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .radio-group input[type="radio"] {
+    accent-color: var(--purple);
+    width: 14px;
+    height: 14px;
+  }
+
+  .checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    accent-color: var(--purple);
+    width: 14px;
+    height: 14px;
+  }
+
+  .var-hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    opacity: 0.8;
+  }
+
+  /* Command preview */
+  .command-preview {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--cyan);
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin-top: 12px;
+  }
+
+  .command-preview-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 14px;
+    margin-bottom: 4px;
+  }
+
+  /* Status section at bottom */
+  .agent-status-card {
+    display: grid;
+    grid-template-columns: 8px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
+
+  .agent-status-card:hover { background: var(--surface2); }
+
+  .agent-indicator {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .agent-indicator.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .agent-indicator.busy { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .agent-indicator.offline { background: var(--red); }
+
+  .tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  .tag.backend { color: var(--blue); border-color: var(--blue-dim); }
+  .tag.frontend { color: var(--purple); border-color: #4c1d95; }
+  .tag.bug { color: var(--red); border-color: var(--red-dim); }
+  .tag.feature { color: var(--green); border-color: var(--green-dim); }
+  .tag.question { color: var(--cyan); border-color: #164e63; }
+  .tag.explore { color: var(--cyan); border-color: #164e63; }
+  .tag.simple { color: var(--yellow); border-color: var(--yellow-dim); }
+  .tag.refactor { color: var(--cyan); border-color: #164e63; }
+
+  .capacity-text {
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .capacity-text .used { color: var(--yellow); font-weight: 600; }
+  .capacity-text .idle { color: var(--green); }
+
+  .empty {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* YAML editor */
+  .yaml-textarea {
+    width: 100%;
+    min-height: 320px;
+    background: var(--bg);
+    color: var(--cyan);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    tab-size: 2;
+  }
+
+  .yaml-textarea:focus { border-color: var(--purple); }
+
+  /* Config status */
+  .config-status {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 4px 0;
+    min-height: 20px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>&#9654;</span> AgentFleet <span style="color: var(--text-dim); font-weight: 400;">&mdash;</span> Agent Setup</h1>
+  <div class="header-right">
+    <a href="/" class="nav-link">&#8592; Hub Dashboard</a>
+  </div>
+</header>
+
+<!-- Machine Settings -->
+<div class="section">
+  <div class="section-header">Machine Settings</div>
+  <div class="section-body">
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>Machine Name</label>
+        <input type="text" id="cfg-machine" placeholder="my-macbook" value="my-macbook">
+        <div class="hint">Unique name for this machine in the fleet</div>
+      </div>
+      <div class="form-group">
+        <label>Hub URL</label>
+        <input type="text" id="cfg-hub" placeholder="ws://localhost:9900" value="ws://localhost:9900">
+        <div class="hint">WebSocket address of the AgentFleet hub</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- My Agents -->
+<div class="section">
+  <div class="section-header">
+    My Agents
+    <span>
+      <button onclick="toggleYamlView()" id="view-toggle-btn" class="btn-secondary" style="padding: 4px 12px; font-size: 11px; margin-right: 6px;">Show YAML</button>
+      <button onclick="saveConfig()" id="save-btn" style="padding: 4px 12px; font-size: 11px;">Save &amp; Apply</button>
+    </span>
+  </div>
+  <div id="config-status" class="config-status" style="padding: 4px 16px;"></div>
+
+  <!-- Visual Builder -->
+  <div id="builder-view" class="section-body" style="padding-top: 8px;">
+    <div id="agent-cards"></div>
+    <button onclick="addAgentCard()" class="btn-add">+ Add Agent</button>
+  </div>
+
+  <!-- Raw YAML (hidden by default) -->
+  <div id="yaml-view" style="padding: 16px; display: none;">
+    <textarea id="config-editor" class="yaml-textarea" spellcheck="false" placeholder="Loading..."></textarea>
+  </div>
+</div>
+
+<!-- My Agents Status (live from hub) -->
+<div class="section">
+  <div class="section-header">
+    My Agents Status
+    <span id="my-status-label" style="color: var(--text-dim); font-size: 11px; font-weight: 400;">live from hub</span>
+  </div>
+  <div class="section-body" id="my-agents-status">
+    <div class="empty">Connect to hub to see agent status</div>
+  </div>
+</div>
+
+<script>
+const HUB = 'http://localhost:9900';
+
+// --- Terminal presets ---
+const LAUNCHER_PRESETS = {
+  'ghostty':   { label: 'Ghostty',              template: 'ghostty -e {script}' },
+  'terminal':  { label: 'Terminal.app',          template: 'open -a Terminal {script}' },
+  'iterm':     { label: 'iTerm2',               template: 'osascript -e \'tell application "iTerm2" to create window with default profile command "{script}"\'' },
+  'tmux':      { label: 'tmux',                 template: 'tmux new-session -d -s af-{dispatch_id} {script}' },
+  'headless':  { label: 'Headless',             template: 'headless' },
+  'custom':    { label: 'Custom...',            template: '' },
+};
+
+// --- Agent type definitions ---
+const AGENT_TYPES = {
+  'claude-code': { label: 'Claude Code' },
+  'codex':       { label: 'Codex CLI' },
+  'custom':      { label: 'Custom' },
+};
+
+// --- Claude models ---
+const CLAUDE_MODELS = [
+  { id: 'claude-opus-4-6',              label: 'Opus 4.6' },
+  { id: 'claude-sonnet-4-6',            label: 'Sonnet 4.6' },
+  { id: 'claude-haiku-4-5-20251001',    label: 'Haiku 4.5' },
+];
+
+// --- Permission modes ---
+const PERMISSION_MODES = [
+  { id: 'default',           label: 'Default' },
+  { id: 'acceptEdits',       label: 'Accept Edits' },
+  { id: 'auto',              label: 'Auto' },
+  { id: 'bypassPermissions', label: 'Bypass All' },
+];
+
+// --- State ---
+let builderAgents = [];
+let showingYaml = false;
+let agentIdCounter = 0;
+
+// --- Helpers ---
+function escHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+function escAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
+
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  return res.json();
+}
+
+// --- Tag input ---
+function handleTagKey(e, id) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const input = e.target;
+    const tag = input.value.replace(/,/g, '').trim().toLowerCase();
+    if (!tag) return;
+    const agent = builderAgents.find(a => a._id === id);
+    if (agent && !agent.tags.includes(tag)) {
+      agent.tags.push(tag);
+      renderAgentCards();
+    }
+  }
+}
+
+function removeTag(id, tag) {
+  const agent = builderAgents.find(a => a._id === id);
+  if (agent) {
+    agent.tags = agent.tags.filter(t => t !== tag);
+    renderAgentCards();
+  }
+}
+
+// --- YAML toggle ---
+function toggleYamlView() {
+  showingYaml = !showingYaml;
+  const btn = document.getElementById('view-toggle-btn');
+  document.getElementById('builder-view').style.display = showingYaml ? 'none' : 'block';
+  document.getElementById('yaml-view').style.display = showingYaml ? 'block' : 'none';
+  btn.textContent = showingYaml ? 'Show Builder' : 'Show YAML';
+  if (showingYaml) {
+    document.getElementById('config-editor').value = buildYaml();
+  } else {
+    // Re-parse from YAML in case the user edited it manually
+    const yamlContent = document.getElementById('config-editor').value;
+    if (yamlContent.trim()) {
+      parseYamlToBuilder(yamlContent);
+    }
+  }
+}
+
+// --- Agent card management ---
+function addAgentCard(data) {
+  const id = agentIdCounter++;
+  const agent = data || {
+    name: '',
+    description: '',
+    tags: [],
+    capacity: 2,
+    launcher: 'ghostty',
+    launcherCustom: '',
+    agentType: 'claude-code',
+    workdir: '',
+    // Claude-specific
+    claudeMode: 'interactive',
+    claudePrompt: 'You have been dispatched by AgentFleet to work on ticket {ticket_id}: {ticket_title}.\n{ticket_description}\n\nStart by understanding the ticket and proposing your approach.',
+    claudeModel: 'claude-opus-4-6',
+    claudeSkipPermissions: true,
+    claudePermissionMode: 'default',
+    claudeMaxTurns: 20,
+    claudeMaxBudget: '',
+    claudeSystemAppend: '',
+    claudeAllowedTools: '',
+    claudeAdditionalFlags: '',
+    // Codex-specific
+    codexPrompt: 'Fix ticket {ticket_id}: {ticket_title}. {ticket_description}',
+    codexQuiet: true,
+    codexFlags: '',
+    // Custom
+    customCommand: '',
+    customFlags: '',
+  };
+  agent._id = id;
+  builderAgents.push(agent);
+  renderAgentCards();
+  return agent;
+}
+
+function removeAgentCard(id) {
+  builderAgents = builderAgents.filter(a => a._id !== id);
+  renderAgentCards();
+}
+
+function updateAgent(id, field, value) {
+  const agent = builderAgents.find(a => a._id === id);
+  if (agent) {
+    agent[field] = value;
+    // Update command preview live
+    updateCommandPreview(id);
+  }
+}
+
+function updateAgentAndRerender(id, field, value) {
+  const agent = builderAgents.find(a => a._id === id);
+  if (agent) {
+    agent[field] = value;
+    renderAgentCards();
+  }
+}
+
+function handleLauncherChange(id, preset) {
+  const agent = builderAgents.find(a => a._id === id);
+  if (!agent) return;
+  agent.launcher = preset;
+  if (preset !== 'custom') agent.launcherCustom = '';
+  renderAgentCards();
+}
+
+// --- Build command string from agent config ---
+function buildCommand(agent) {
+  if (agent.agentType === 'custom') {
+    let cmd = agent.customCommand || '';
+    if (agent.customFlags && agent.customFlags.trim()) cmd += ' ' + agent.customFlags.trim();
+    return cmd;
+  }
+
+  if (agent.agentType === 'codex') {
+    let cmd = 'codex';
+    if (agent.codexQuiet) cmd += ' --quiet';
+    cmd += ` --prompt '${(agent.codexPrompt || '').replace(/'/g, "'\\''")}'`;
+    if (agent.codexFlags && agent.codexFlags.trim()) cmd += ' ' + agent.codexFlags.trim();
+    return cmd;
+  }
+
+  // Claude Code
+  const isHeadless = agent.claudeMode === 'headless';
+  let cmd;
+
+  if (isHeadless) {
+    cmd = `claude -p '${(agent.claudePrompt || '').replace(/'/g, "'\\''")}'`;
+  } else {
+    cmd = `claude '${(agent.claudePrompt || '').replace(/'/g, "'\\''")}'`;
+  }
+
+  if (agent.claudeSkipPermissions) {
+    cmd += ' --dangerously-skip-permissions';
+  }
+
+  if (agent.claudePermissionMode && agent.claudePermissionMode !== 'default') {
+    cmd += ` --permission-mode ${agent.claudePermissionMode}`;
+  }
+
+  if (agent.claudeModel && agent.claudeModel !== 'claude-opus-4-6') {
+    cmd += ` --model ${agent.claudeModel}`;
+  }
+
+  if (agent.claudeMaxTurns) {
+    cmd += ` --max-turns ${agent.claudeMaxTurns}`;
+  }
+
+  if (agent.claudeMaxBudget) {
+    cmd += ` --max-budget-usd ${agent.claudeMaxBudget}`;
+  }
+
+  if (isHeadless) {
+    cmd += ' --output-format stream-json --verbose';
+  }
+
+  if (agent.claudeSystemAppend && agent.claudeSystemAppend.trim()) {
+    cmd += ` --append-system-prompt '${agent.claudeSystemAppend.trim().replace(/'/g, "'\\''")}'`;
+  }
+
+  if (agent.claudeAllowedTools && agent.claudeAllowedTools.trim()) {
+    cmd += ` --allowedTools ${agent.claudeAllowedTools.trim()}`;
+  }
+
+  if (agent.claudeAdditionalFlags && agent.claudeAdditionalFlags.trim()) {
+    cmd += ' ' + agent.claudeAdditionalFlags.trim();
+  }
+
+  return cmd;
+}
+
+function formatCommandPreview(cmd) {
+  // Break the command at flag boundaries for readability
+  if (!cmd) return '(no command configured)';
+  // Split on ' --' but keep the --
+  const parts = cmd.split(/ (--)/);
+  let result = '';
+  let first = true;
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i] === '--' && i + 1 < parts.length) {
+      // Find the next -- or end
+      const flagAndVal = '--' + parts[i + 1];
+      result += '\n  ' + flagAndVal;
+      i++;
+    } else if (first) {
+      result += parts[i];
+      first = false;
+    }
+  }
+  return result;
+}
+
+function updateCommandPreview(id) {
+  const agent = builderAgents.find(a => a._id === id);
+  if (!agent) return;
+  const el = document.getElementById(`cmd-preview-${id}`);
+  if (el) {
+    el.textContent = formatCommandPreview(buildCommand(agent));
+  }
+}
+
+// --- Render all agent cards ---
+function renderAgentCards() {
+  const container = document.getElementById('agent-cards');
+  container.innerHTML = builderAgents.map(a => {
+    const cmd = buildCommand(a);
+
+    return `
+    <div class="agent-builder-card" data-id="${a._id}">
+      <div class="card-header">
+        <span class="card-title">${escHtml(a.name || 'New Agent')}</span>
+        <button class="btn-danger" onclick="removeAgentCard(${a._id})">&#215;</button>
+      </div>
+
+      <!-- Basic info row -->
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" value="${escAttr(a.name)}" placeholder="my-agent"
+            oninput="updateAgent(${a._id}, 'name', this.value); this.closest('.agent-builder-card').querySelector('.card-title').textContent = this.value || 'New Agent'">
+          <div class="hint">Unique identifier, no spaces</div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" value="${escAttr(a.description)}" placeholder="What this agent does"
+            oninput="updateAgent(${a._id}, 'description', this.value)">
+        </div>
+        <div class="form-group">
+          <label>Capacity</label>
+          <input type="number" value="${a.capacity}" min="1" max="10" style="width: 100%;"
+            oninput="updateAgent(${a._id}, 'capacity', parseInt(this.value) || 1)">
+          <div class="hint">Max concurrent jobs</div>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label>Tags</label>
+        <div class="tag-input-wrapper" onclick="this.querySelector('input').focus()">
+          ${(a.tags || []).map(t => `<span class="tag-chip">${escHtml(t)}<span class="tag-remove" onclick="removeTag(${a._id}, '${escAttr(t)}')">&#215;</span></span>`).join('')}
+          <input type="text" placeholder="${a.tags.length ? '' : 'Type a tag and press Enter...'}"
+            onkeydown="handleTagKey(event, ${a._id})">
+        </div>
+        <div class="hint">Press Enter or comma to add. Matched against ticket labels for routing.</div>
+      </div>
+
+      <!-- Working dir -->
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label>Working Directory</label>
+        <input type="text" value="${escAttr(a.workdir)}" placeholder="/path/to/your/repo"
+          oninput="updateAgent(${a._id}, 'workdir', this.value)">
+        <div class="hint">The repo this agent works in</div>
+      </div>
+
+      <!-- Terminal + Agent Type -->
+      <div class="form-row-2" style="margin-bottom: 12px;">
+        <div class="form-group">
+          <label>Terminal</label>
+          <select onchange="handleLauncherChange(${a._id}, this.value)">
+            ${Object.entries(LAUNCHER_PRESETS).map(([k, v]) =>
+              `<option value="${k}" ${a.launcher === k ? 'selected' : ''}>${escHtml(v.label)}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Agent Type</label>
+          <select onchange="updateAgentAndRerender(${a._id}, 'agentType', this.value)">
+            ${Object.entries(AGENT_TYPES).map(([k, v]) =>
+              `<option value="${k}" ${a.agentType === k ? 'selected' : ''}>${escHtml(v.label)}</option>`
+            ).join('')}
+          </select>
+        </div>
+      </div>
+
+      ${a.launcher === 'custom' ? `
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label>Custom Launcher Command</label>
+        <input type="text" value="${escAttr(a.launcherCustom)}" placeholder="ghostty -e {script}"
+          oninput="updateAgent(${a._id}, 'launcherCustom', this.value)">
+        <div class="hint">Variables: {script} {workdir} {ticket_id} {agent_name} {dispatch_id}</div>
+      </div>` : ''}
+
+      <!-- Agent-type-specific config -->
+      ${renderAgentTypeConfig(a)}
+
+      <!-- Command Preview -->
+      <div class="command-preview-label">Generated command preview</div>
+      <div class="command-preview" id="cmd-preview-${a._id}">${escHtml(formatCommandPreview(cmd))}</div>
+    </div>
+    `;
+  }).join('');
+}
+
+function renderAgentTypeConfig(a) {
+  if (a.agentType === 'claude-code') return renderClaudeConfig(a);
+  if (a.agentType === 'codex') return renderCodexConfig(a);
+  if (a.agentType === 'custom') return renderCustomConfig(a);
+  return '';
+}
+
+function renderClaudeConfig(a) {
+  return `
+  <div class="config-panel">
+    <div class="config-panel-title">Claude Code Configuration</div>
+
+    <!-- Mode -->
+    <div class="form-group" style="margin-bottom: 14px;">
+      <label>Mode</label>
+      <div class="radio-group" style="margin-top: 4px;">
+        <label>
+          <input type="radio" name="claude-mode-${a._id}" value="interactive"
+            ${a.claudeMode === 'interactive' ? 'checked' : ''}
+            onchange="updateAgentAndRerender(${a._id}, 'claudeMode', 'interactive')">
+          Interactive (opens TUI, you can intervene)
+        </label>
+        <label>
+          <input type="radio" name="claude-mode-${a._id}" value="headless"
+            ${a.claudeMode === 'headless' ? 'checked' : ''}
+            onchange="updateAgentAndRerender(${a._id}, 'claudeMode', 'headless')">
+          Headless (runs in background, streams JSON)
+        </label>
+      </div>
+    </div>
+
+    <!-- Prompt Template -->
+    <div class="form-group" style="margin-bottom: 14px;">
+      <label>Prompt Template</label>
+      <textarea rows="4" oninput="updateAgent(${a._id}, 'claudePrompt', this.value)">${escHtml(a.claudePrompt || '')}</textarea>
+      <div class="var-hint">Available variables: {ticket_id} {ticket_title} {ticket_description}</div>
+    </div>
+
+    <!-- Model -->
+    <div class="form-row-2" style="margin-bottom: 14px;">
+      <div class="form-group">
+        <label>Model</label>
+        <select onchange="updateAgent(${a._id}, 'claudeModel', this.value)">
+          ${CLAUDE_MODELS.map(m =>
+            `<option value="${m.id}" ${a.claudeModel === m.id ? 'selected' : ''}>${escHtml(m.label)}</option>`
+          ).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Permission Mode</label>
+        <select onchange="updateAgent(${a._id}, 'claudePermissionMode', this.value)">
+          ${PERMISSION_MODES.map(m =>
+            `<option value="${m.id}" ${a.claudePermissionMode === m.id ? 'selected' : ''}>${escHtml(m.label)}</option>`
+          ).join('')}
+        </select>
+      </div>
+    </div>
+
+    <!-- Permissions -->
+    <div class="form-group" style="margin-bottom: 14px;">
+      <label>Permissions</label>
+      <div class="checkbox-group" style="margin-top: 4px;">
+        <label>
+          <input type="checkbox" ${a.claudeSkipPermissions ? 'checked' : ''}
+            onchange="updateAgent(${a._id}, 'claudeSkipPermissions', this.checked)">
+          Skip permission prompts (--dangerously-skip-permissions)
+        </label>
+      </div>
+    </div>
+
+    <!-- Limits -->
+    <div class="form-row-2" style="margin-bottom: 14px;">
+      <div class="form-group">
+        <label>Max Turns</label>
+        <input type="number" value="${a.claudeMaxTurns || ''}" min="1" max="200" placeholder="20"
+          oninput="updateAgent(${a._id}, 'claudeMaxTurns', this.value ? parseInt(this.value) : '')">
+      </div>
+      <div class="form-group">
+        <label>Max Budget (USD)</label>
+        <input type="text" value="${a.claudeMaxBudget || ''}" placeholder="5.00"
+          oninput="updateAgent(${a._id}, 'claudeMaxBudget', this.value)">
+      </div>
+    </div>
+
+    <!-- Context -->
+    <div class="form-group" style="margin-bottom: 14px;">
+      <label>System Prompt Append</label>
+      <textarea rows="2" placeholder="(optional additional system prompt)"
+        oninput="updateAgent(${a._id}, 'claudeSystemAppend', this.value)">${escHtml(a.claudeSystemAppend || '')}</textarea>
+    </div>
+
+    <!-- Advanced -->
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>Allowed Tools</label>
+        <input type="text" value="${escAttr(a.claudeAllowedTools)}" placeholder="Bash,Read,Edit,Write,Glob,Grep"
+          oninput="updateAgent(${a._id}, 'claudeAllowedTools', this.value)">
+        <div class="hint">Comma-separated list of allowed tools</div>
+      </div>
+      <div class="form-group">
+        <label>Additional Flags</label>
+        <input type="text" value="${escAttr(a.claudeAdditionalFlags)}" placeholder="--verbose"
+          oninput="updateAgent(${a._id}, 'claudeAdditionalFlags', this.value)">
+        <div class="hint">Extra CLI flags appended to command</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCodexConfig(a) {
+  return `
+  <div class="config-panel">
+    <div class="config-panel-title">Codex CLI Configuration</div>
+
+    <!-- Prompt -->
+    <div class="form-group" style="margin-bottom: 14px;">
+      <label>Prompt Template</label>
+      <textarea rows="3" oninput="updateAgent(${a._id}, 'codexPrompt', this.value)">${escHtml(a.codexPrompt || '')}</textarea>
+      <div class="var-hint">Available variables: {ticket_id} {ticket_title} {ticket_description}</div>
+    </div>
+
+    <!-- Options -->
+    <div class="form-row-2">
+      <div class="form-group">
+        <div class="checkbox-group" style="margin-top: 4px;">
+          <label>
+            <input type="checkbox" ${a.codexQuiet ? 'checked' : ''}
+              onchange="updateAgent(${a._id}, 'codexQuiet', this.checked)">
+            Quiet mode (--quiet)
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Additional Flags</label>
+        <input type="text" value="${escAttr(a.codexFlags)}" placeholder="--model gpt-4"
+          oninput="updateAgent(${a._id}, 'codexFlags', this.value)">
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCustomConfig(a) {
+  return `
+  <div class="config-panel">
+    <div class="config-panel-title">Custom Command Configuration</div>
+
+    <div class="form-group" style="margin-bottom: 14px;">
+      <label>Full Command</label>
+      <input type="text" value="${escAttr(a.customCommand)}" placeholder="my-tool --run '{ticket_description}'"
+        oninput="updateAgent(${a._id}, 'customCommand', this.value)">
+      <div class="var-hint">Available variables: {ticket_id} {ticket_title} {ticket_description}</div>
+    </div>
+
+    <div class="form-group">
+      <label>Additional Flags</label>
+      <input type="text" value="${escAttr(a.customFlags)}" placeholder="--verbose"
+        oninput="updateAgent(${a._id}, 'customFlags', this.value)">
+    </div>
+  </div>`;
+}
+
+// --- Build YAML from builder state ---
+function buildYaml() {
+  const hub = document.getElementById('cfg-hub').value || 'ws://localhost:9900';
+  const machine = document.getElementById('cfg-machine').value || 'my-macbook';
+
+  let yaml = `hub: ${hub}\nmachine_name: ${machine}\n\nagents:\n`;
+
+  for (const a of builderAgents) {
+    if (!a.name) continue;
+    const launcher = a.launcher === 'custom' ? a.launcherCustom : LAUNCHER_PRESETS[a.launcher]?.template || 'headless';
+    const command = buildCommand(a);
+
+    yaml += `  - name: ${a.name}\n`;
+    if (a.description) yaml += `    description: "${a.description}"\n`;
+    yaml += `    tags: [${a.tags.join(', ')}]\n`;
+    yaml += `    capacity: ${a.capacity || 2}\n`;
+    yaml += `    invoke:\n`;
+    yaml += `      launcher: "${launcher}"\n`;
+    yaml += `      command: "${command.replace(/"/g, '\\"')}"\n`;
+    if (a.workdir) yaml += `      workdir: ${a.workdir}\n`;
+    yaml += `\n`;
+  }
+
+  return yaml;
+}
+
+// --- Parse YAML into builder state ---
+function parseYamlToBuilder(content) {
+  builderAgents = [];
+  agentIdCounter = 0;
+
+  const lines = content.split('\n');
+  let i = 0;
+
+  // Read top-level
+  for (; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('hub:')) {
+      document.getElementById('cfg-hub').value = line.replace('hub:', '').trim();
+    } else if (line.startsWith('machine_name:')) {
+      document.getElementById('cfg-machine').value = line.replace('machine_name:', '').trim();
+    } else if (line.trim() === 'agents:') {
+      i++;
+      break;
+    }
+  }
+
+  // Read agents
+  let current = null;
+  for (; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    if (trimmed.startsWith('- name:')) {
+      if (current) addAgentFromParsed(current);
+      current = { name: trimmed.replace('- name:', '').trim() };
+    } else if (current) {
+      if (trimmed.startsWith('description:')) {
+        current.description = trimmed.replace('description:', '').trim().replace(/^"|"$/g, '');
+      } else if (trimmed.startsWith('tags:')) {
+        const tagStr = trimmed.replace('tags:', '').trim();
+        current.tags = tagStr.replace(/[\[\]]/g, '').split(',').map(t => t.trim()).filter(Boolean);
+      } else if (trimmed.startsWith('capacity:')) {
+        current.capacity = parseInt(trimmed.replace('capacity:', '').trim()) || 2;
+      } else if (trimmed.startsWith('launcher:')) {
+        current.launcherRaw = trimmed.replace('launcher:', '').trim().replace(/^"|"$/g, '');
+      } else if (trimmed.startsWith('command:')) {
+        current.commandRaw = trimmed.replace('command:', '').trim().replace(/^"|"$/g, '');
+      } else if (trimmed.startsWith('workdir:')) {
+        current.workdir = trimmed.replace('workdir:', '').trim();
+      }
+    }
+  }
+  if (current) addAgentFromParsed(current);
+  renderAgentCards();
+}
+
+function addAgentFromParsed(raw) {
+  // Match launcher to preset
+  let launcher = 'custom';
+  let launcherCustom = raw.launcherRaw || '';
+  for (const [k, v] of Object.entries(LAUNCHER_PRESETS)) {
+    if (v.template === launcherCustom) { launcher = k; launcherCustom = ''; break; }
+  }
+
+  // Determine agent type and parse command
+  const cmd = raw.commandRaw || '';
+  let agentData = {
+    name: raw.name || '',
+    description: raw.description || '',
+    tags: raw.tags || [],
+    capacity: raw.capacity || 2,
+    launcher,
+    launcherCustom,
+    workdir: raw.workdir || '',
+    agentType: 'custom',
+    // Claude defaults
+    claudeMode: 'interactive',
+    claudePrompt: 'You have been dispatched by AgentFleet to work on ticket {ticket_id}: {ticket_title}.\n{ticket_description}\n\nStart by understanding the ticket and proposing your approach.',
+    claudeModel: 'claude-opus-4-6',
+    claudeSkipPermissions: false,
+    claudePermissionMode: 'default',
+    claudeMaxTurns: 20,
+    claudeMaxBudget: '',
+    claudeSystemAppend: '',
+    claudeAllowedTools: '',
+    claudeAdditionalFlags: '',
+    // Codex defaults
+    codexPrompt: '',
+    codexQuiet: false,
+    codexFlags: '',
+    // Custom
+    customCommand: cmd,
+    customFlags: '',
+  };
+
+  // Detect if it's a claude command
+  if (cmd.startsWith('claude ')) {
+    agentData.agentType = 'claude-code';
+
+    // Detect headless mode
+    if (cmd.includes(' -p ') || cmd.startsWith('claude -p ')) {
+      agentData.claudeMode = 'headless';
+    }
+
+    // Extract prompt - find first quoted argument
+    const promptMatch = cmd.match(/claude(?:\s+-p)?\s+'((?:[^'\\]|\\.)*)'/);
+    if (promptMatch) {
+      agentData.claudePrompt = promptMatch[1].replace(/\\'/g, "'");
+    }
+
+    // Parse flags
+    agentData.claudeSkipPermissions = cmd.includes('--dangerously-skip-permissions');
+
+    const modelMatch = cmd.match(/--model\s+(\S+)/);
+    if (modelMatch) agentData.claudeModel = modelMatch[1];
+
+    const permMatch = cmd.match(/--permission-mode\s+(\S+)/);
+    if (permMatch) agentData.claudePermissionMode = permMatch[1];
+
+    const turnsMatch = cmd.match(/--max-turns\s+(\d+)/);
+    if (turnsMatch) agentData.claudeMaxTurns = parseInt(turnsMatch[1]);
+
+    const budgetMatch = cmd.match(/--max-budget-usd\s+([\d.]+)/);
+    if (budgetMatch) agentData.claudeMaxBudget = budgetMatch[1];
+
+    const sysMatch = cmd.match(/--append-system-prompt\s+'((?:[^'\\]|\\.)*)'/);
+    if (sysMatch) agentData.claudeSystemAppend = sysMatch[1].replace(/\\'/g, "'");
+
+    const toolsMatch = cmd.match(/--allowedTools\s+(\S+)/);
+    if (toolsMatch) agentData.claudeAllowedTools = toolsMatch[1];
+
+    // Collect any remaining unknown flags
+    let remaining = cmd;
+    // Remove known parts
+    remaining = remaining.replace(/claude(?:\s+-p)?\s+'(?:[^'\\]|\\.)*'/, '');
+    remaining = remaining.replace(/--dangerously-skip-permissions/g, '');
+    remaining = remaining.replace(/--model\s+\S+/g, '');
+    remaining = remaining.replace(/--permission-mode\s+\S+/g, '');
+    remaining = remaining.replace(/--max-turns\s+\d+/g, '');
+    remaining = remaining.replace(/--max-budget-usd\s+[\d.]+/g, '');
+    remaining = remaining.replace(/--output-format\s+\S+/g, '');
+    remaining = remaining.replace(/--verbose/g, '');
+    remaining = remaining.replace(/--append-system-prompt\s+'(?:[^'\\]|\\.)*'/g, '');
+    remaining = remaining.replace(/--allowedTools\s+\S+/g, '');
+    remaining = remaining.trim();
+    if (remaining) agentData.claudeAdditionalFlags = remaining;
+
+  } else if (cmd.startsWith('codex')) {
+    agentData.agentType = 'codex';
+    agentData.codexQuiet = cmd.includes('--quiet');
+
+    const codexPromptMatch = cmd.match(/--prompt\s+'((?:[^'\\]|\\.)*)'/);
+    if (codexPromptMatch) agentData.codexPrompt = codexPromptMatch[1];
+
+    // Remaining flags
+    let remaining = cmd.replace(/codex/, '').replace(/--quiet/g, '').replace(/--prompt\s+'(?:[^'\\]|\\.)*'/g, '').trim();
+    if (remaining) agentData.codexFlags = remaining;
+  }
+
+  addAgentCard(agentData);
+}
+
+// --- Save / Load ---
+async function loadConfig() {
+  const status = document.getElementById('config-status');
+  try {
+    const data = await fetchJSON(`${HUB}/config`);
+    document.getElementById('config-editor').value = data.content;
+    parseYamlToBuilder(data.content);
+    status.textContent = `Loaded from ${data.path}`;
+    status.style.color = 'var(--text-dim)';
+  } catch (e) {
+    status.textContent = `Error loading config: ${e.message}`;
+    status.style.color = 'var(--red)';
+  }
+}
+
+async function saveConfig() {
+  const status = document.getElementById('config-status');
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+
+  const content = showingYaml ? document.getElementById('config-editor').value : buildYaml();
+
+  try {
+    const res = await fetch(`${HUB}/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      try { await fetch(`${HUB}/restart-daemon`, { method: 'POST' }); } catch(e) {}
+      status.textContent = 'Saved! Daemon restarting...';
+      status.style.color = 'var(--green)';
+    } else {
+      status.textContent = `Error: ${data.error}`;
+      status.style.color = 'var(--red)';
+    }
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    status.style.color = 'var(--red)';
+  }
+  btn.disabled = false;
+}
+
+// --- My Agents Status (live) ---
+async function refreshMyAgentsStatus() {
+  const container = document.getElementById('my-agents-status');
+  const machineName = document.getElementById('cfg-machine').value || 'my-macbook';
+
+  try {
+    const data = await fetchJSON(`${HUB}/agents`);
+    const myAgents = (data.agents || []).filter(a => a.machine === machineName);
+
+    if (myAgents.length === 0) {
+      container.innerHTML = '<div class="empty">No agents from this machine are registered with the hub</div>';
+      document.getElementById('my-status-label').textContent = 'no agents online';
+      return;
+    }
+
+    const online = myAgents.filter(a => a.online).length;
+    document.getElementById('my-status-label').textContent = `${online}/${myAgents.length} online`;
+
+    container.innerHTML = myAgents.map(a => {
+      const status = !a.online ? 'offline' : a.running > 0 ? 'busy' : 'online';
+      const capClass = a.running > 0 ? 'used' : 'idle';
+      const tagKnown = ['backend', 'frontend', 'bug', 'feature', 'question', 'explore', 'simple', 'refactor'];
+      return `
+        <div class="agent-status-card">
+          <div class="agent-indicator ${status}"></div>
+          <div>
+            <div style="font-weight: 600; font-size: 13px;">${escHtml(a.name)}</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">${escHtml(a.description || '')}</div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+              ${(a.tags || []).map(t => `<span class="tag ${tagKnown.includes(t) ? t : ''}">${escHtml(t)}</span>`).join('')}
+            </div>
+          </div>
+          <div class="capacity-text">
+            <span class="${capClass}">${a.running}</span> / ${a.capacity}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = `<div class="empty">Cannot reach hub: ${escHtml(e.message)}</div>`;
+    document.getElementById('my-status-label').textContent = 'disconnected';
+  }
+}
+
+// --- Tab key in YAML textarea ---
+document.getElementById('config-editor').addEventListener('keydown', function(e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = this.selectionStart;
+    this.value = this.value.substring(0, s) + '  ' + this.value.substring(this.selectionEnd);
+    this.selectionStart = this.selectionEnd = s + 2;
+  }
+});
+
+// --- Start ---
+loadConfig();
+refreshMyAgentsStatus();
+setInterval(refreshMyAgentsStatus, 3000);
+</script>
+
+</body>
+</html>

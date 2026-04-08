@@ -1,0 +1,18 @@
+[HUB 11:37:42] Hub listening on http://localhost:9900 (HTTP + WebSocket)
+[HUB 11:37:55] Agent registered: my-macbook/backend-agent (tags: backend, api)
+[HUB 11:37:55] Agent registered: my-macbook/frontend-agent (tags: frontend, ui)
+[HUB 11:37:55] Agent registered: my-macbook/quick-fixer (tags: bug, simple)
+[HUB 11:37:55] Machine "my-macbook" connected with 3 agent(s)
+[HUB 11:38:51] Dispatch d-001: KIP-101 -> my-macbook/backend-agent
+[HUB 11:38:51] Status d-001: "started" (0s since dispatch)
+[HUB 11:38:51] Status d-001: "Working on KIP-101: Add export API endpoint" (0s since dispatch)
+[HUB 11:38:53] Status d-001: "Reading codebase..." (2s since dispatch)
+[HUB 11:38:55] Status d-001: "Writing code..." (4s since dispatch)
+[HUB 11:38:57] Status d-001: "Done! PR created." (6s since dispatch)
+[HUB 11:38:57] Complete d-001: completed (exit 0)
+[HUB 11:39:21] Dispatch d-002: KIP-202 -> my-macbook/quick-fixer
+[HUB 11:39:21] Status d-002: "started" (0s since dispatch)
+[HUB 11:39:21] Status d-002: "Quick fix for KIP-202: Fix login button alignment" (0s since dispatch)
+[HUB 11:39:22] Status d-002: "Fixed!" (1s since dispatch)
+[HUB 11:39:22] Complete d-002: completed (exit 0)
+[HUB 11:42:05] Shutting down...

@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Setup — AgentFleet</title>
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a3a;
+    --text: #e0e0e8; --text-dim: #6a6a80;
+    --green: #34d399; --green-dim: #064e3b;
+    --yellow: #fbbf24; --yellow-dim: #78350f;
+    --red: #f87171; --red-dim: #7f1d1d;
+    --blue: #60a5fa; --blue-dim: #1e3a5f;
+    --purple: #a78bfa; --cyan: #22d3ee;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 20px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
+  header h1 span { color: var(--purple); }
+
+  .conn-status {
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .conn-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red);
+  }
+  .conn-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* --- Connection Info Bar --- */
+  .conn-info {
+    display: flex;
+    gap: 24px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 11px;
+    color: var(--text-dim);
+    flex-wrap: wrap;
+  }
+  .conn-info strong { color: var(--text); margin-right: 4px; }
+
+  /* --- Toast --- */
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 999;
+    transform: translateX(120%);
+    transition: transform 0.3s ease;
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.success { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+  .toast.error { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+
+  /* --- Form Elements --- */
+  input, select, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--purple); }
+  textarea { resize: vertical; min-height: 60px; }
+  select { cursor: pointer; }
+
+  label {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .form-group { margin-bottom: 12px; }
+
+  .form-row {
+    display: grid;
+    gap: 12px;
+  }
+  .form-row.two { grid-template-columns: 1fr 1fr; }
+  .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  /* --- Buttons --- */
+  button {
+    background: var(--purple);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-secondary:hover { border-color: var(--text-dim); }
+
+  .btn-danger {
+    background: transparent;
+    border: 1px solid var(--red-dim);
+    color: var(--red);
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  .btn-danger:hover { background: var(--red-dim); }
+
+  .btn-green {
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    color: var(--green);
+  }
+
+  /* --- Agent Card --- */
+  .agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .agent-card:hover { border-color: var(--text-dim); }
+
+  .agent-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .agent-card-number {
+    font-size: 11px;
+    color: var(--purple);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  /* --- Tags Chip Input --- */
+  .tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    min-height: 36px;
+    align-items: center;
+    cursor: text;
+  }
+  .tags-container:focus-within { border-color: var(--purple); }
+
+  .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .tag-chip .tag-remove {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1;
+  }
+  .tag-chip .tag-remove:hover { color: var(--red); }
+
+  .tag-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 2px 4px !important;
+    min-width: 80px;
+    flex: 1;
+    outline: none;
+    font-size: 11px;
+  }
+
+  /* --- Command Preview --- */
+  .cmd-preview {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--cyan);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  /* --- Config Panel --- */
+  .config-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 8px;
+  }
+  .config-panel-title {
+    font-size: 11px;
+    color: var(--purple);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .checkbox-row input[type="checkbox"] {
+    width: auto;
+    accent-color: var(--purple);
+  }
+  .checkbox-row label {
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* --- Actions Bar --- */
+  .actions-bar {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* --- Hub Status Section --- */
+  .hub-status {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 16px;
+  }
+  .hub-status-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+  }
+  .hub-status-body {
+    padding: 8px 16px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .hub-agent-row {
+    display: grid;
+    grid-template-columns: 8px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .hub-agent-row:last-child { border-bottom: none; }
+  .hub-agent-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .hub-agent-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .hub-agent-dot.busy { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .hub-agent-dot.offline { background: var(--red); }
+  .hub-agent-name { font-size: 12px; font-weight: 600; }
+  .hub-agent-meta { font-size: 11px; color: var(--text-dim); }
+  .hub-agent-cap { font-size: 12px; color: var(--text-dim); }
+  .empty-msg {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<header>
+  <h1><span>&#9654;</span> AgentFleet &mdash; Local Agent Setup</h1>
+  <div class="conn-status">
+    <div class="conn-dot" id="conn-dot"></div>
+    <span id="conn-label">Connecting...</span>
+  </div>
+</header>
+
+<div class="conn-info" id="conn-info">
+  <span><strong>Hub:</strong> <span id="info-hub">--</span></span>
+  <span><strong>Member:</strong> <span id="info-member">--</span></span>
+  <span><strong>Team:</strong> <span id="info-team">--</span></span>
+  <span><strong>Machine:</strong> <span id="info-machine">--</span></span>
+</div>
+
+<div id="agents-container"></div>
+
+<div class="actions-bar">
+  <button onclick="addAgent()" class="btn-secondary">+ Add Agent</button>
+  <button onclick="saveAgents()" id="save-btn">Save &amp; Restart Daemon</button>
+</div>
+
+<div class="hub-status">
+  <div class="hub-status-header">Current Hub Status &mdash; Registered Agents</div>
+  <div class="hub-status-body" id="hub-agents">
+    <div class="empty-msg">Loading...</div>
+  </div>
+</div>
+
+<script>
+// ---------- State ----------
+const API = '';
+let agents = [];
+let homeDir = '';
+
+// ---------- Toast ----------
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' show';
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ---------- Escape ----------
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ---------- Init ----------
+async function init() {
+  try {
+    const res = await fetch(API + '/api/config');
+    if (!res.ok) throw new Error('Failed to load config');
+    const data = await res.json();
+    homeDir = data.home || '';
+    document.getElementById('info-hub').textContent = data.hub || '--';
+    document.getElementById('info-machine').textContent = data.machine_name || '--';
+
+    agents = (data.agents || []).map(normalizeAgent);
+
+    // Load me info
+    try {
+      const meRes = await fetch(API + '/api/me');
+      if (meRes.ok) {
+        const me = await meRes.json();
+        document.getElementById('info-member').textContent = me.member?.name || me.member?.email || '--';
+        document.getElementById('info-team').textContent = me.team?.name || '--';
+        document.getElementById('conn-dot').classList.add('ok');
+        document.getElementById('conn-label').textContent = 'Connected';
+      }
+    } catch (_) {}
+
+    if (agents.length === 0) addAgent();
+    else renderAll();
+
+    loadHubAgents();
+  } catch (e) {
+    document.getElementById('conn-label').textContent = 'Error: ' + e.message;
+    toast('Failed to load config: ' + e.message, 'error');
+  }
+}
+
+function normalizeAgent(a) {
+  // Parse existing invoke into structured fields
+  const inv = a.invoke || {};
+  const cmd = inv.command || '';
+  const launcher = inv.launcher || 'headless';
+
+  let agentType = 'claude-interactive';
+  let prompt = "You have been dispatched by AgentFleet to work on ticket {ticket_id}: {ticket_title}. {ticket_description}";
+  let model = '';
+  let skipPerms = false;
+  let permMode = '';
+  let maxTurns = '';
+  let maxBudget = '';
+  let allowedTools = '';
+  let additionalFlags = '';
+  let codexQuiet = false;
+  let customCommand = cmd;
+
+  // Detect agent type from command
+  if (cmd.startsWith('claude ')) {
+    if (cmd.includes(' -p ') || cmd.includes(" -p '")) {
+      agentType = 'claude-headless';
+    } else {
+      agentType = 'claude-interactive';
+    }
+    // Parse prompt
+    const promptMatch = cmd.match(/claude\s+(?:-p\s+)?'((?:[^'\\]|\\.)*)'/);
+    if (promptMatch) prompt = promptMatch[1];
+
+    // Parse flags
+    if (cmd.includes('--dangerously-skip-permissions')) skipPerms = true;
+    const modelMatch = cmd.match(/--model\s+(\S+)/);
+    if (modelMatch) model = modelMatch[1];
+    const permModeMatch = cmd.match(/--permission-mode\s+(\S+)/);
+    if (permModeMatch) permMode = permModeMatch[1];
+    const turnsMatch = cmd.match(/--max-turns\s+(\d+)/);
+    if (turnsMatch) maxTurns = turnsMatch[1];
+    const budgetMatch = cmd.match(/--max-budget-usd\s+([\d.]+)/);
+    if (budgetMatch) maxBudget = budgetMatch[1];
+    const toolsMatch = cmd.match(/--allowedTools\s+'([^']+)'/);
+    if (toolsMatch) allowedTools = toolsMatch[1];
+    else {
+      const toolsMatch2 = cmd.match(/--allowedTools\s+(\S+)/);
+      if (toolsMatch2) allowedTools = toolsMatch2[1];
+    }
+
+    // Remaining flags
+    let remaining = cmd;
+    remaining = remaining.replace(/claude\s+(?:-p\s+)?'(?:[^'\\]|\\.)*'/, '');
+    remaining = remaining.replace(/--output-format\s+stream-json/, '');
+    remaining = remaining.replace(/--verbose/, '');
+    remaining = remaining.replace(/--dangerously-skip-permissions/g, '');
+    remaining = remaining.replace(/--model\s+\S+/, '');
+    remaining = remaining.replace(/--permission-mode\s+\S+/, '');
+    remaining = remaining.replace(/--max-turns\s+\d+/, '');
+    remaining = remaining.replace(/--max-budget-usd\s+[\d.]+/, '');
+    remaining = remaining.replace(/--allowedTools\s+'[^']*'/, '');
+    remaining = remaining.replace(/--allowedTools\s+\S+/, '');
+    remaining = remaining.trim();
+    if (remaining) additionalFlags = remaining;
+  } else if (cmd.startsWith('codex ')) {
+    agentType = 'codex';
+    const codexPromptMatch = cmd.match(/--prompt\s+'((?:[^'\\]|\\.)*)'/);
+    if (codexPromptMatch) prompt = codexPromptMatch[1];
+    codexQuiet = cmd.includes('--quiet');
+    let remaining = cmd;
+    remaining = remaining.replace(/codex\s+/, '');
+    remaining = remaining.replace(/--quiet/, '');
+    remaining = remaining.replace(/--prompt\s+'(?:[^'\\]|\\.)*'/, '');
+    remaining = remaining.trim();
+    if (remaining) additionalFlags = remaining;
+  } else if (cmd) {
+    agentType = 'custom';
+    customCommand = cmd;
+  }
+
+  // Parse terminal from launcher
+  let terminal = 'headless';
+  let customLauncher = '';
+  if (typeof launcher === 'string') {
+    if (launcher === 'headless') terminal = 'headless';
+    else if (launcher.startsWith('ghostty')) terminal = 'ghostty';
+    else if (launcher.includes('Terminal.app') || launcher.includes('osascript') && launcher.includes('Terminal')) terminal = 'terminal-app';
+    else if (launcher.includes('iTerm') || launcher.includes('iterm')) terminal = 'iterm2';
+    else if (launcher.startsWith('tmux')) terminal = 'tmux';
+    else {
+      terminal = 'custom';
+      customLauncher = launcher;
+    }
+  }
+
+  return {
+    name: a.name || '',
+    description: a.description || '',
+    tags: a.tags || [],
+    capacity: a.capacity || 1,
+    workdir: inv.workdir || '',
+    terminal,
+    customLauncher,
+    agentType,
+    prompt,
+    model,
+    skipPerms,
+    permMode,
+    maxTurns,
+    maxBudget,
+    allowedTools,
+    additionalFlags,
+    codexQuiet,
+    customCommand,
+  };
+}
+
+// ---------- Render ----------
+function renderAll() {
+  const container = document.getElementById('agents-container');
+  container.innerHTML = '';
+  agents.forEach((a, i) => {
+    container.appendChild(buildAgentCard(a, i));
+  });
+}
+
+function buildAgentCard(agent, idx) {
+  const card = document.createElement('div');
+  card.className = 'agent-card';
+  card.id = 'agent-' + idx;
+
+  const isClaudeInteractive = agent.agentType === 'claude-interactive';
+  const isClaudeHeadless = agent.agentType === 'claude-headless';
+  const isClaude = isClaudeInteractive || isClaudeHeadless;
+  const isCodex = agent.agentType === 'codex';
+  const isCustom = agent.agentType === 'custom';
+
+  card.innerHTML = `
+    <div class="agent-card-header">
+      <span class="agent-card-number">Agent #${idx + 1}</span>
+      <button class="btn-danger" onclick="removeAgent(${idx})">Remove</button>
+    </div>
+
+    <div class="form-row two">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" value="${esc(agent.name)}" onchange="agents[${idx}].name=this.value;updatePreview(${idx})" placeholder="my-agent">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" value="${esc(agent.description)}" onchange="agents[${idx}].description=this.value" placeholder="What this agent does">
+      </div>
+    </div>
+
+    <div class="form-row three">
+      <div class="form-group">
+        <label>Tags <span style="color:var(--text-dim);text-transform:none;letter-spacing:0">(Enter to add)</span></label>
+        <div class="tags-container" id="tags-${idx}" onclick="this.querySelector('input').focus()">
+          ${agent.tags.map((t, ti) => `<span class="tag-chip">${esc(t)}<span class="tag-remove" onclick="removeTag(${idx},${ti})">&times;</span></span>`).join('')}
+          <input class="tag-input" placeholder="add tag..." onkeydown="handleTagKey(event,${idx})">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Capacity</label>
+        <input type="number" min="1" value="${agent.capacity}" onchange="agents[${idx}].capacity=parseInt(this.value)||1;updatePreview(${idx})">
+      </div>
+      <div class="form-group">
+        <label>Working Directory</label>
+        <input type="text" value="${esc(agent.workdir)}" onchange="agents[${idx}].workdir=this.value;updatePreview(${idx})" placeholder="${esc(homeDir)}/my-project">
+      </div>
+    </div>
+
+    <div class="form-row two">
+      <div class="form-group">
+        <label>Terminal</label>
+        <select onchange="agents[${idx}].terminal=this.value;renderAll()">
+          <option value="ghostty" ${agent.terminal==='ghostty'?'selected':''}>Ghostty</option>
+          <option value="terminal-app" ${agent.terminal==='terminal-app'?'selected':''}>Terminal.app</option>
+          <option value="iterm2" ${agent.terminal==='iterm2'?'selected':''}>iTerm2</option>
+          <option value="tmux" ${agent.terminal==='tmux'?'selected':''}>tmux</option>
+          <option value="headless" ${agent.terminal==='headless'?'selected':''}>Headless</option>
+          <option value="custom" ${agent.terminal==='custom'?'selected':''}>Custom</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Agent Type</label>
+        <select onchange="agents[${idx}].agentType=this.value;renderAll()">
+          <option value="claude-interactive" ${agent.agentType==='claude-interactive'?'selected':''}>Claude Code (interactive)</option>
+          <option value="claude-headless" ${agent.agentType==='claude-headless'?'selected':''}>Claude Code (headless)</option>
+          <option value="codex" ${agent.agentType==='codex'?'selected':''}>Codex CLI</option>
+          <option value="custom" ${agent.agentType==='custom'?'selected':''}>Custom</option>
+        </select>
+      </div>
+    </div>
+
+    ${agent.terminal === 'custom' ? `
+    <div class="form-group">
+      <label>Custom Launcher Template <span style="color:var(--text-dim);text-transform:none;letter-spacing:0">(use {script} for the script path)</span></label>
+      <input type="text" value="${esc(agent.customLauncher)}" onchange="agents[${idx}].customLauncher=this.value;updatePreview(${idx})" placeholder="my-terminal -e {script}">
+    </div>
+    ` : ''}
+
+    ${isClaude ? buildClaudePanel(agent, idx) : ''}
+    ${isCodex ? buildCodexPanel(agent, idx) : ''}
+    ${isCustom ? buildCustomPanel(agent, idx) : ''}
+
+    <div class="form-group" style="margin-top:12px">
+      <label>Command Preview</label>
+      <div class="cmd-preview" id="preview-${idx}">${esc(generateCommand(agent))}</div>
+    </div>
+  `;
+
+  return card;
+}
+
+function buildClaudePanel(agent, idx) {
+  const isHeadless = agent.agentType === 'claude-headless';
+  return `
+    <div class="config-panel">
+      <div class="config-panel-title">Claude Code Configuration${isHeadless ? ' (headless: uses -p flag + stream-json)' : ''}</div>
+      <div class="form-group">
+        <label>Prompt Template</label>
+        <textarea onchange="agents[${idx}].prompt=this.value;updatePreview(${idx})" placeholder="You have been dispatched by AgentFleet to work on ticket {ticket_id}: {ticket_title}. {ticket_description}">${esc(agent.prompt)}</textarea>
+      </div>
+      <div class="form-row four">
+        <div class="form-group">
+          <label>Model</label>
+          <select onchange="agents[${idx}].model=this.value;updatePreview(${idx})">
+            <option value="" ${agent.model===''?'selected':''}>Default</option>
+            <option value="claude-opus-4-6" ${agent.model==='claude-opus-4-6'?'selected':''}>Opus 4.6</option>
+            <option value="claude-sonnet-4-6" ${agent.model==='claude-sonnet-4-6'?'selected':''}>Sonnet 4.6</option>
+            <option value="claude-haiku-4-5-20251001" ${agent.model==='claude-haiku-4-5-20251001'?'selected':''}>Haiku 4.5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Permission Mode</label>
+          <select onchange="agents[${idx}].permMode=this.value;updatePreview(${idx})">
+            <option value="" ${agent.permMode===''?'selected':''}>Default</option>
+            <option value="acceptEdits" ${agent.permMode==='acceptEdits'?'selected':''}>acceptEdits</option>
+            <option value="auto" ${agent.permMode==='auto'?'selected':''}>auto</option>
+            <option value="bypassPermissions" ${agent.permMode==='bypassPermissions'?'selected':''}>bypassPermissions</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Max Turns</label>
+          <input type="number" min="1" value="${esc(agent.maxTurns)}" onchange="agents[${idx}].maxTurns=this.value;updatePreview(${idx})" placeholder="20">
+        </div>
+        <div class="form-group">
+          <label>Max Budget USD</label>
+          <input type="number" min="0" step="0.01" value="${esc(agent.maxBudget)}" onchange="agents[${idx}].maxBudget=this.value;updatePreview(${idx})" placeholder="5.00">
+        </div>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="skip-perms-${idx}" ${agent.skipPerms?'checked':''} onchange="agents[${idx}].skipPerms=this.checked;updatePreview(${idx})">
+        <label for="skip-perms-${idx}">Skip permission prompts (--dangerously-skip-permissions)</label>
+      </div>
+      <div class="form-row two">
+        <div class="form-group">
+          <label>Allowed Tools</label>
+          <input type="text" value="${esc(agent.allowedTools)}" onchange="agents[${idx}].allowedTools=this.value;updatePreview(${idx})" placeholder="Bash,Read,Edit,Write,Glob,Grep">
+        </div>
+        <div class="form-group">
+          <label>Additional Flags</label>
+          <input type="text" value="${esc(agent.additionalFlags)}" onchange="agents[${idx}].additionalFlags=this.value;updatePreview(${idx})">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildCodexPanel(agent, idx) {
+  return `
+    <div class="config-panel">
+      <div class="config-panel-title">Codex CLI Configuration</div>
+      <div class="form-group">
+        <label>Prompt Template</label>
+        <textarea onchange="agents[${idx}].prompt=this.value;updatePreview(${idx})" placeholder="You have been dispatched by AgentFleet...">${esc(agent.prompt)}</textarea>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="codex-quiet-${idx}" ${agent.codexQuiet?'checked':''} onchange="agents[${idx}].codexQuiet=this.checked;updatePreview(${idx})">
+        <label for="codex-quiet-${idx}">Quiet mode (--quiet)</label>
+      </div>
+      <div class="form-group">
+        <label>Additional Flags</label>
+        <input type="text" value="${esc(agent.additionalFlags)}" onchange="agents[${idx}].additionalFlags=this.value;updatePreview(${idx})">
+      </div>
+    </div>
+  `;
+}
+
+function buildCustomPanel(agent, idx) {
+  return `
+    <div class="config-panel">
+      <div class="config-panel-title">Custom Command</div>
+      <div class="form-group">
+        <label>Full Command</label>
+        <textarea onchange="agents[${idx}].customCommand=this.value;updatePreview(${idx})" placeholder="my-tool --flag value">${esc(agent.customCommand)}</textarea>
+      </div>
+      <div class="form-group">
+        <label>Additional Flags</label>
+        <input type="text" value="${esc(agent.additionalFlags)}" onchange="agents[${idx}].additionalFlags=this.value;updatePreview(${idx})">
+      </div>
+    </div>
+  `;
+}
+
+// ---------- Command Generation ----------
+function generateCommand(a) {
+  if (a.agentType === 'claude-interactive') {
+    let cmd = "claude '" + (a.prompt || '') + "'";
+    if (a.model) cmd += ' --model ' + a.model;
+    if (a.skipPerms) cmd += ' --dangerously-skip-permissions';
+    if (a.permMode) cmd += ' --permission-mode ' + a.permMode;
+    if (a.maxTurns) cmd += ' --max-turns ' + a.maxTurns;
+    if (a.maxBudget) cmd += ' --max-budget-usd ' + a.maxBudget;
+    if (a.allowedTools) cmd += " --allowedTools '" + a.allowedTools + "'";
+    if (a.additionalFlags) cmd += ' ' + a.additionalFlags;
+    return cmd;
+  }
+  if (a.agentType === 'claude-headless') {
+    let cmd = "claude -p '" + (a.prompt || '') + "' --output-format stream-json --verbose";
+    if (a.model) cmd += ' --model ' + a.model;
+    if (a.skipPerms) cmd += ' --dangerously-skip-permissions';
+    if (a.permMode) cmd += ' --permission-mode ' + a.permMode;
+    if (a.maxTurns) cmd += ' --max-turns ' + a.maxTurns;
+    if (a.maxBudget) cmd += ' --max-budget-usd ' + a.maxBudget;
+    if (a.allowedTools) cmd += " --allowedTools '" + a.allowedTools + "'";
+    if (a.additionalFlags) cmd += ' ' + a.additionalFlags;
+    return cmd;
+  }
+  if (a.agentType === 'codex') {
+    let cmd = 'codex';
+    if (a.codexQuiet) cmd += ' --quiet';
+    cmd += " --prompt '" + (a.prompt || '') + "'";
+    if (a.additionalFlags) cmd += ' ' + a.additionalFlags;
+    return cmd;
+  }
+  if (a.agentType === 'custom') {
+    let cmd = a.customCommand || '';
+    if (a.additionalFlags) cmd += ' ' + a.additionalFlags;
+    return cmd;
+  }
+  return '';
+}
+
+function generateLauncher(a) {
+  switch (a.terminal) {
+    case 'ghostty': return 'ghostty -e {script}';
+    case 'terminal-app': return 'open -a Terminal {script}';
+    case 'iterm2': return 'open -a iTerm {script}';
+    case 'tmux': return 'tmux new-window {script}';
+    case 'headless': return 'headless';
+    case 'custom': return a.customLauncher || 'headless';
+    default: return 'headless';
+  }
+}
+
+function updatePreview(idx) {
+  const el = document.getElementById('preview-' + idx);
+  if (el) el.textContent = generateCommand(agents[idx]);
+}
+
+// ---------- Tags ----------
+function handleTagKey(e, idx) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const val = e.target.value.trim();
+    if (val && !agents[idx].tags.includes(val)) {
+      agents[idx].tags.push(val);
+      renderAll();
+    }
+    return;
+  }
+  if (e.key === 'Backspace' && e.target.value === '' && agents[idx].tags.length > 0) {
+    agents[idx].tags.pop();
+    renderAll();
+  }
+}
+
+function removeTag(agentIdx, tagIdx) {
+  agents[agentIdx].tags.splice(tagIdx, 1);
+  renderAll();
+}
+
+// ---------- Add / Remove ----------
+function addAgent() {
+  agents.push({
+    name: '',
+    description: '',
+    tags: [],
+    capacity: 1,
+    workdir: '',
+    terminal: 'ghostty',
+    customLauncher: '',
+    agentType: 'claude-interactive',
+    prompt: "You have been dispatched by AgentFleet to work on ticket {ticket_id}: {ticket_title}. {ticket_description}",
+    model: '',
+    skipPerms: false,
+    permMode: '',
+    maxTurns: '',
+    maxBudget: '',
+    allowedTools: '',
+    additionalFlags: '',
+    codexQuiet: false,
+    customCommand: '',
+  });
+  renderAll();
+  const last = document.getElementById('agent-' + (agents.length - 1));
+  if (last) last.scrollIntoView({ behavior: 'smooth' });
+}
+
+function removeAgent(idx) {
+  if (agents.length <= 1) {
+    toast('Need at least one agent', 'error');
+    return;
+  }
+  agents.splice(idx, 1);
+  renderAll();
+}
+
+// ---------- Save ----------
+async function saveAgents() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  // Validate
+  for (let i = 0; i < agents.length; i++) {
+    if (!agents[i].name.trim()) {
+      toast('Agent #' + (i + 1) + ' needs a name', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Save & Restart Daemon';
+      return;
+    }
+  }
+
+  // Build YAML-compatible payload
+  const payload = agents.map(a => {
+    const launcher = generateLauncher(a);
+    return {
+      name: a.name.trim(),
+      description: a.description.trim(),
+      tags: a.tags,
+      capacity: parseInt(a.capacity) || 1,
+      invoke: {
+        launcher: launcher === 'headless' ? 'headless' : launcher,
+        command: generateCommand(a),
+        workdir: a.workdir.trim() || undefined,
+      },
+    };
+  });
+
+  try {
+    const res = await fetch(API + '/api/agents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agents: payload }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Save failed');
+    toast('Agents saved to ~/.agentfleet/agents.yaml', 'success');
+
+    // Restart daemon
+    btn.textContent = 'Restarting daemon...';
+    try {
+      const restartRes = await fetch(API + '/api/restart', { method: 'POST' });
+      const restartData = await restartRes.json();
+      if (restartData.ok) {
+        toast('Daemon restarted successfully', 'success');
+      } else {
+        toast('Saved, but daemon restart note: ' + (restartData.message || ''), 'success');
+      }
+    } catch (e) {
+      toast('Saved. Daemon restart: ' + e.message, 'error');
+    }
+
+    setTimeout(loadHubAgents, 3000);
+  } catch (e) {
+    toast('Save error: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Save & Restart Daemon';
+}
+
+// ---------- Hub Agents ----------
+async function loadHubAgents() {
+  try {
+    const res = await fetch(API + '/api/agents');
+    if (!res.ok) throw new Error('Failed');
+    const data = await res.json();
+    const hubAgents = data.agents || [];
+    const container = document.getElementById('hub-agents');
+
+    if (hubAgents.length === 0) {
+      container.innerHTML = '<div class="empty-msg">No agents registered on the hub. Save your config and start the daemon.</div>';
+      return;
+    }
+
+    container.innerHTML = hubAgents.map(a => {
+      const status = !a.online ? 'offline' : a.running > 0 ? 'busy' : 'online';
+      return `
+        <div class="hub-agent-row">
+          <div class="hub-agent-dot ${status}"></div>
+          <div>
+            <div class="hub-agent-name">${esc(a.machine)}/${esc(a.name)}</div>
+            <div class="hub-agent-meta">${esc(a.description || '')} ${(a.tags||[]).length ? '&mdash; ' + (a.tags||[]).map(t => esc(t)).join(', ') : ''}</div>
+          </div>
+          <div class="hub-agent-cap">${a.running || 0} / ${a.capacity || 1}</div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    document.getElementById('hub-agents').innerHTML = '<div class="empty-msg">Could not load hub agents.</div>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

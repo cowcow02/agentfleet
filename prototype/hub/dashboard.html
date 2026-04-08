@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentFleet Hub</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3a;
+    --text: #e0e0e8;
+    --text-dim: #6a6a80;
+    --green: #34d399;
+    --green-dim: #064e3b;
+    --yellow: #fbbf24;
+    --yellow-dim: #78350f;
+    --red: #f87171;
+    --red-dim: #7f1d1d;
+    --blue: #60a5fa;
+    --blue-dim: #1e3a5f;
+    --purple: #a78bfa;
+    --cyan: #22d3ee;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 20px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  header h1 span { color: var(--purple); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .nav-link {
+    color: var(--purple);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    transition: opacity 0.15s;
+  }
+
+  .nav-link:hover { opacity: 0.75; }
+
+  .connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+  }
+  .dot.connected { background: var(--green); }
+
+  /* Stats bar */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .stat-value.green { color: var(--green); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.blue { color: var(--blue); }
+  .stat-value.purple { color: var(--purple); }
+
+  /* Layout */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-body {
+    padding: 8px;
+    max-height: 350px;
+    overflow-y: auto;
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  /* Agent cards */
+  .agent-card {
+    display: grid;
+    grid-template-columns: 8px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
+
+  .agent-card:hover { background: var(--surface2); }
+
+  .agent-indicator {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .agent-indicator.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .agent-indicator.busy { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .agent-indicator.offline { background: var(--red); }
+
+  .agent-info h3 {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .agent-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .agent-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  .tag.backend { color: var(--blue); border-color: var(--blue-dim); }
+  .tag.frontend { color: var(--purple); border-color: #4c1d95; }
+  .tag.bug { color: var(--red); border-color: var(--red-dim); }
+  .tag.feature { color: var(--green); border-color: var(--green-dim); }
+  .tag.question { color: var(--cyan); border-color: #164e63; }
+  .tag.explore { color: var(--cyan); border-color: #164e63; }
+  .tag.simple { color: var(--yellow); border-color: var(--yellow-dim); }
+  .tag.refactor { color: var(--cyan); border-color: #164e63; }
+
+  .capacity {
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .capacity .used { color: var(--yellow); font-weight: 600; }
+  .capacity .idle { color: var(--green); }
+
+  /* Dispatch cards */
+  .dispatch-card {
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    border-left: 3px solid var(--border);
+  }
+
+  .dispatch-card:hover { background: var(--surface2); }
+  .dispatch-card.running { border-left-color: var(--yellow); }
+  .dispatch-card.completed { border-left-color: var(--green); }
+  .dispatch-card.failed { border-left-color: var(--red); }
+  .dispatch-card.dispatched { border-left-color: var(--blue); }
+
+  .dispatch-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .dispatch-ticket {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .dispatch-status {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .dispatch-status.running { background: var(--yellow-dim); color: var(--yellow); }
+  .dispatch-status.completed { background: var(--green-dim); color: var(--green); }
+  .dispatch-status.failed { background: var(--red-dim); color: var(--red); }
+  .dispatch-status.dispatched { background: var(--blue-dim); color: var(--blue); }
+
+  .dispatch-detail {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .dispatch-agent { color: var(--purple); }
+  .dispatch-time { color: var(--text-dim); }
+
+  /* Status messages */
+  .messages {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+
+  .msg {
+    font-size: 11px;
+    padding: 2px 0;
+    color: var(--text-dim);
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 8px;
+  }
+
+  .msg-time { color: var(--text-dim); opacity: 0.6; }
+  .msg-text { color: var(--text); word-break: break-word; }
+
+  /* Live feed */
+  .feed-item {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    margin-bottom: 2px;
+  }
+
+  .feed-item:hover { background: var(--surface2); }
+  .feed-time { color: var(--text-dim); margin-right: 8px; font-size: 11px; }
+  .feed-event { color: var(--blue); }
+  .feed-status { color: var(--yellow); }
+  .feed-complete { color: var(--green); }
+  .feed-error { color: var(--red); }
+
+  /* Dispatch form */
+  .dispatch-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .dispatch-form h2 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 1fr 120px auto;
+    gap: 8px;
+    align-items: end;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 11px; color: var(--text-dim); }
+
+  .form-group input, .form-group select, .form-group textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+  }
+
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--purple);
+  }
+
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 120px;
+    gap: 8px;
+    align-items: end;
+    margin-top: 8px;
+  }
+
+  textarea {
+    resize: vertical;
+    font-family: inherit;
+    font-size: 12px;
+  }
+
+  button {
+    background: var(--purple);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .empty {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>&#9654;</span> AgentFleet Hub</h1>
+  <div class="header-right">
+    <a href="/setup" class="nav-link">&#8594; Agent Setup</a>
+    <div class="connection-status">
+      <div class="dot" id="ws-dot"></div>
+      <span id="ws-status">Connecting...</span>
+      <span style="margin-left: 12px; color: var(--text-dim);" id="last-update"></span>
+    </div>
+  </div>
+</header>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Machines Online</div>
+    <div class="stat-value green" id="stat-machines">&mdash;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Agents Registered</div>
+    <div class="stat-value blue" id="stat-agents">&mdash;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Running Jobs</div>
+    <div class="stat-value yellow" id="stat-running">&mdash;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total Dispatches</div>
+    <div class="stat-value purple" id="stat-dispatches">&mdash;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Completed</div>
+    <div class="stat-value green" id="stat-completed">&mdash;</div>
+  </div>
+</div>
+
+<!-- Quick Dispatch -->
+<div class="dispatch-form">
+  <h2>Quick Dispatch</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Ticket ID</label>
+      <input type="text" id="d-id" placeholder="KIP-301" value="KIP-301">
+    </div>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="d-title" placeholder="Describe the ticket" value="">
+    </div>
+    <div class="form-group">
+      <label>Labels (comma-separated)</label>
+      <input type="text" id="d-labels" placeholder="backend, feature" value="backend, feature">
+    </div>
+    <div class="form-group">
+      <label>Priority</label>
+      <select id="d-priority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="critical">Critical</option>
+      </select>
+    </div>
+    <button onclick="dispatchTicket()" id="dispatch-btn">Dispatch</button>
+  </div>
+  <div class="form-row-2" style="margin-top: 8px;">
+    <div class="form-group" style="grid-column: 1 / -1;">
+      <label>Description (optional)</label>
+      <textarea id="d-description" rows="2" placeholder="Additional context for the agent..."></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Main grid -->
+<div class="grid">
+  <!-- Fleet Overview -->
+  <div class="panel">
+    <div class="panel-header">
+      Fleet Overview
+      <span id="agent-count" style="color: var(--blue);"></span>
+    </div>
+    <div class="panel-body" id="agents-list">
+      <div class="empty">Waiting for agents...</div>
+    </div>
+  </div>
+
+  <!-- Live Feed -->
+  <div class="panel">
+    <div class="panel-header">
+      Live Feed
+      <span id="feed-count" style="color: var(--green);"></span>
+    </div>
+    <div class="panel-body" id="feed-list">
+      <div class="empty">No events yet</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dispatches (full width) -->
+<div class="grid">
+  <div class="panel full-width">
+    <div class="panel-header">
+      Dispatches
+      <span id="dispatch-count" style="color: var(--purple);"></span>
+    </div>
+    <div class="panel-body" id="dispatches-list" style="max-height: 500px;">
+      <div class="empty">No dispatches yet. Use the form above to send a ticket.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const HUB = 'http://localhost:9900';
+const feedItems = [];
+const MAX_FEED = 100;
+
+// --- Polling ---
+let pollTimer = null;
+
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  return res.json();
+}
+
+async function refresh() {
+  try {
+    const [status, agentsData, dispatchData] = await Promise.all([
+      fetchJSON(`${HUB}/status`),
+      fetchJSON(`${HUB}/agents`),
+      fetchJSON(`${HUB}/dispatches`),
+    ]);
+
+    updateStats(status, dispatchData.dispatches);
+    updateAgents(agentsData.agents);
+    updateDispatches(dispatchData.dispatches);
+    updateConnectionStatus(true);
+  } catch (e) {
+    updateConnectionStatus(false);
+  }
+}
+
+function updateConnectionStatus(connected) {
+  const dot = document.getElementById('ws-dot');
+  const label = document.getElementById('ws-status');
+  const update = document.getElementById('last-update');
+
+  dot.className = connected ? 'dot connected' : 'dot';
+  label.textContent = connected ? 'Connected' : 'Disconnected';
+  if (connected) {
+    update.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  }
+}
+
+function updateStats(status, dispatches) {
+  document.getElementById('stat-machines').textContent = status.machines_online;
+  document.getElementById('stat-agents').textContent = status.agents_registered;
+  document.getElementById('stat-running').textContent = status.running_jobs;
+  document.getElementById('stat-dispatches').textContent = status.total_dispatches;
+
+  const completed = (dispatches || []).filter(d => d.status === 'completed').length;
+  document.getElementById('stat-completed').textContent = completed;
+}
+
+function tagClass(tag) {
+  const known = ['backend', 'frontend', 'bug', 'feature', 'question', 'explore', 'simple', 'refactor'];
+  return known.includes(tag) ? `tag ${tag}` : 'tag';
+}
+
+function updateAgents(agents) {
+  const container = document.getElementById('agents-list');
+  document.getElementById('agent-count').textContent = `${agents.length} agents`;
+
+  if (agents.length === 0) {
+    container.innerHTML = '<div class="empty">No agents registered</div>';
+    return;
+  }
+
+  container.innerHTML = agents.map(a => {
+    const status = !a.online ? 'offline' : a.running > 0 ? 'busy' : 'online';
+    const capClass = a.running > 0 ? 'used' : 'idle';
+    return `
+      <div class="agent-card">
+        <div class="agent-indicator ${status}"></div>
+        <div class="agent-info">
+          <h3>${escHtml(a.machine)}/${escHtml(a.name)}</h3>
+          <div class="agent-meta">${escHtml(a.description || '')}</div>
+          <div class="agent-tags" style="margin-top: 4px;">
+            ${(a.tags || []).map(t => `<span class="${tagClass(t)}">${escHtml(t)}</span>`).join('')}
+          </div>
+        </div>
+        <div class="capacity">
+          <span class="${capClass}">${a.running}</span> / ${a.capacity}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-US', { hour12: false });
+}
+
+function elapsed(from, to) {
+  if (!from) return '';
+  const ms = (new Date(to || Date.now())) - new Date(from);
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  return `${m}m ${s % 60}s`;
+}
+
+// Track previous dispatch state for feed
+let prevDispatchState = {};
+
+function updateDispatches(dispatches) {
+  const container = document.getElementById('dispatches-list');
+  document.getElementById('dispatch-count').textContent = `${dispatches.length} total`;
+
+  if (dispatches.length === 0) {
+    container.innerHTML = '<div class="empty">No dispatches yet. Use the form above to send a ticket.</div>';
+    return;
+  }
+
+  // Detect new events for feed
+  for (const d of dispatches) {
+    const prevStatus = prevDispatchState[d.dispatch_id];
+    const prevMsgCount = prevStatus?.msgCount || 0;
+    const currMsgCount = (d.messages || []).length;
+
+    if (!prevStatus) {
+      addFeedItem('event', `Dispatched ${d.ticket.id} \u2192 ${d.machine}/${d.agent}`);
+    }
+
+    // New status messages
+    for (let i = prevMsgCount; i < currMsgCount; i++) {
+      const msg = d.messages[i];
+      addFeedItem('status', `${d.ticket.id}: ${msg.message}`);
+    }
+
+    if (prevStatus?.status !== d.status) {
+      if (d.status === 'completed') {
+        addFeedItem('complete', `${d.ticket.id} completed (${elapsed(d.created_at, d.updated_at)})`);
+      } else if (d.status === 'failed') {
+        addFeedItem('error', `${d.ticket.id} failed (exit ${d.exit_code})`);
+      }
+    }
+
+    prevDispatchState[d.dispatch_id] = { status: d.status, msgCount: currMsgCount };
+  }
+
+  // Render dispatches (newest first)
+  const sorted = [...dispatches].reverse();
+  container.innerHTML = sorted.map(d => {
+    const msgs = (d.messages || []).slice(-6);
+    const messagesHtml = msgs.length > 0 ? `
+      <div class="messages">
+        ${msgs.map(m => `
+          <div class="msg">
+            <span class="msg-time">${fmtTime(m.timestamp)}</span>
+            <span class="msg-text">${escHtml(m.message)}</span>
+          </div>
+        `).join('')}
+        ${d.messages.length > 6 ? `<div class="msg"><span class="msg-time"></span><span class="msg-text" style="color: var(--text-dim);">... ${d.messages.length - 6} earlier messages</span></div>` : ''}
+      </div>
+    ` : '';
+
+    return `
+      <div class="dispatch-card ${d.status}">
+        <div class="dispatch-header">
+          <span>
+            <span class="dispatch-ticket">${escHtml(d.ticket.id)}</span>
+            <span style="color: var(--text-dim); margin-left: 8px;">${escHtml(d.ticket.title || '')}</span>
+          </span>
+          <span class="dispatch-status ${d.status}">${d.status}</span>
+        </div>
+        <div class="dispatch-detail">
+          <span class="dispatch-agent">\u2192 ${escHtml(d.machine)}/${escHtml(d.agent)}</span>
+          <span class="dispatch-time" style="margin-left: 12px;">
+            dispatched ${fmtTime(d.created_at)}
+            ${d.status === 'completed' || d.status === 'failed' ? ` \u00b7 took ${elapsed(d.created_at, d.updated_at)}` : ` \u00b7 running ${elapsed(d.created_at)}`}
+          </span>
+        </div>
+        ${messagesHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+function addFeedItem(type, text) {
+  feedItems.unshift({ type, text, time: new Date() });
+  if (feedItems.length > MAX_FEED) feedItems.pop();
+  renderFeed();
+}
+
+function renderFeed() {
+  const container = document.getElementById('feed-list');
+  document.getElementById('feed-count').textContent = `${feedItems.length} events`;
+
+  container.innerHTML = feedItems.map(f => {
+    const cls = f.type === 'complete' ? 'feed-complete'
+      : f.type === 'error' ? 'feed-error'
+      : f.type === 'status' ? 'feed-status'
+      : 'feed-event';
+    return `
+      <div class="feed-item">
+        <span class="feed-time">${f.time.toLocaleTimeString('en-US', { hour12: false })}</span>
+        <span class="${cls}">${escHtml(f.text)}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function escHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+// --- Dispatch ---
+async function dispatchTicket() {
+  const id = document.getElementById('d-id').value.trim();
+  const title = document.getElementById('d-title').value.trim();
+  const description = document.getElementById('d-description').value.trim();
+  const labels = document.getElementById('d-labels').value.split(',').map(l => l.trim()).filter(Boolean);
+  const priority = document.getElementById('d-priority').value;
+
+  if (!id || labels.length === 0) {
+    alert('Ticket ID and at least one label are required');
+    return;
+  }
+
+  const btn = document.getElementById('dispatch-btn');
+  btn.disabled = true;
+  btn.textContent = 'Dispatching...';
+
+  try {
+    const res = await fetch(`${HUB}/dispatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ticket: {
+          id,
+          title: title || id,
+          description: description || title || '',
+          labels,
+          priority
+        }
+      })
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      addFeedItem('event', `Dispatched ${id} \u2192 ${data.machine}/${data.agent}`);
+      // Increment ticket ID
+      const match = id.match(/^([A-Z]+-?)(\d+)$/);
+      if (match) {
+        document.getElementById('d-id').value = `${match[1]}${parseInt(match[2]) + 1}`;
+      }
+      document.getElementById('d-title').value = '';
+      document.getElementById('d-description').value = '';
+    } else {
+      addFeedItem('error', `Dispatch failed: ${data.error}`);
+    }
+  } catch (e) {
+    addFeedItem('error', `Dispatch error: ${e.message}`);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Dispatch';
+  setTimeout(refresh, 500);
+}
+
+// --- Start polling ---
+refresh();
+pollTimer = setInterval(refresh, 1500);
+</script>
+
+</body>
+</html>

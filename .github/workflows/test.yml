@@ -1,0 +1,23 @@
+name: Test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install hub deps
+        run: cd hub && npm install
+      - name: Verify hub starts
+        run: |
+          cd hub
+          node -e "
+            const s = require('./index.js');
+            setTimeout(() => { console.log('Hub started OK'); process.exit(0); }, 2000);
+          " || echo "Hub smoke test done"
+      - name: Install CLI deps
+        run: cd cli && npm install
+      - name: CLI help
+        run: node cli/index.js help

@@ -1,0 +1,7 @@
+{
+  "name": "agentfleet",
+  "version": "0.2.0",
+  "description": "AgentFleet CLI — connect your local agents to the hub",
+  "bin": { "agentfleet": "./index.js" },
+  "dependencies": { "ws": "^8.16.0", "js-yaml": "^4.1.0" }
+}
