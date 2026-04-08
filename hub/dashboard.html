@@ -133,8 +133,9 @@
   .stat-card {
     background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px;
     padding: 20px 24px; box-shadow: none;
+    display: flex; flex-direction: column; justify-content: space-between;
   }
-  .stat-label { font-size: 12px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .stat-label { font-size: 12px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; min-height: 2.4em; }
   .stat-value { font-size: 28px; font-weight: 700; font-feature-settings: 'tnum'; line-height: 1.1; }
   .stat-value.success { color: var(--success); }
   .stat-value.info { color: var(--info); }
