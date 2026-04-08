@@ -6,13 +6,41 @@
 <title>AgentFleet — Agent Discovery & Dispatch</title>
 <style>
   :root {
-    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a3a;
-    --text: #e0e0e8; --text-dim: #6a6a80;
-    --green: #34d399; --green-dim: #064e3b;
-    --yellow: #fbbf24; --yellow-dim: #78350f;
-    --red: #f87171; --red-dim: #7f1d1d;
-    --blue: #60a5fa; --blue-dim: #1e3a5f;
-    --purple: #a78bfa; --cyan: #22d3ee;
+    --bg: #FDFBF9;
+    --surface: #F5F1EC;
+    --surface2: #EDE8E0;
+    --border: #E8E2DA;
+    --text: #1A1A1A;
+    --text-dim: #8A8580;
+    --green: #059669;
+    --green-dim: rgba(5, 150, 105, 0.10);
+    --yellow: #D97706;
+    --yellow-dim: rgba(217, 119, 6, 0.10);
+    --red: #C53030;
+    --red-dim: rgba(197, 48, 48, 0.10);
+    --blue: #3B7DD8;
+    --blue-dim: rgba(59, 125, 216, 0.10);
+    --purple: #14B8A6;
+    --cyan: #14B8A6;
+  }
+
+  [data-theme="dark"] {
+    --bg: #222228;
+    --surface: #2C2C33;
+    --surface2: #333340;
+    --border: #38383F;
+    --text: #E8E8F0;
+    --text-dim: #707078;
+    --green: #34D399;
+    --green-dim: rgba(52, 211, 153, 0.12);
+    --yellow: #FBBF24;
+    --yellow-dim: rgba(251, 191, 36, 0.10);
+    --red: #F87171;
+    --red-dim: rgba(248, 113, 113, 0.12);
+    --blue: #5B9BF0;
+    --blue-dim: rgba(91, 155, 240, 0.12);
+    --purple: #2DD4BF;
+    --cyan: #2DD4BF;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -141,7 +169,7 @@
   button:hover { opacity: 0.85; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .btn-green { background: var(--green); color: #000; }
+  .btn-green { background: var(--green); color: var(--bg); }
 
   .divider {
     display: flex;
@@ -202,7 +230,7 @@
 
   .join-panel .join-info {
     background: var(--blue-dim);
-    border: 1px solid rgba(96,165,250,0.2);
+    border: 1px solid var(--blue-dim);
     border-radius: 6px;
     padding: 10px 14px;
     font-size: 12px;
@@ -261,6 +289,16 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .theme-toggle-landing {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); width: 36px; height: 36px;
+    border-radius: 50%; cursor: pointer; transition: all 0.15s;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-top: 12px;
+  }
+  .theme-toggle-landing:hover { color: var(--text); border-color: var(--text-dim); }
+  .theme-toggle-landing svg { width: 16px; height: 16px; }
 </style>
 </head>
 <body>
@@ -269,6 +307,10 @@
   <div class="brand">
     <h1><span>&#9654;</span> AgentFleet</h1>
     <p>Agent Discovery &amp; Dispatch Platform</p>
+    <button onclick="toggleTheme()" class="theme-toggle-landing" id="theme-toggle" title="Toggle theme">
+      <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    </button>
   </div>
 
   <!-- Join panel (shown when ?invite=XXXX) -->
@@ -373,6 +415,36 @@
 </div>
 
 <script>
+(function initTheme() {
+  const saved = localStorage.getItem('agentfleet-theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = saved || (prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeIcon(theme);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if (!localStorage.getItem('agentfleet-theme')) {
+      const t = e.matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+      updateThemeIcon(t);
+    }
+  });
+})();
+function updateThemeIcon(theme) {
+  const sun = document.getElementById('theme-icon-sun');
+  const moon = document.getElementById('theme-icon-moon');
+  if (sun && moon) {
+    sun.style.display = theme === 'dark' ? 'block' : 'none';
+    moon.style.display = theme === 'dark' ? 'none' : 'block';
+  }
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('agentfleet-theme', next);
+  updateThemeIcon(next);
+}
+
 const HUB = window.location.origin;
 
 // --- Tab switching ---
