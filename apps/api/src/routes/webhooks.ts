@@ -22,9 +22,7 @@ webhooksRouter.post("/api/webhooks/linear/:orgId", async (c) => {
   const [integration] = await db
     .select()
     .from(integrations)
-    .where(
-      and(eq(integrations.organizationId, orgId), eq(integrations.type, "linear"))
-    )
+    .where(and(eq(integrations.organizationId, orgId), eq(integrations.type, "linear")))
     .limit(1);
 
   if (!integration) {
@@ -44,34 +42,31 @@ webhooksRouter.post("/api/webhooks/linear/:orgId", async (c) => {
     return c.json({ ok: true });
   }
 
-  // Check status trigger
+  // Check status trigger — normalize both sides (remove spaces/underscores for comparison)
   const issueStatus = body.data?.state?.name ?? body.data?.status ?? "";
-  if (
-    config.triggerStatus &&
-    issueStatus.toLowerCase() !== config.triggerStatus.toLowerCase()
-  ) {
+  const normalize = (s: string) => s.toLowerCase().replace(/[\s_-]+/g, "");
+  if (config.triggerStatus && normalize(issueStatus) !== normalize(config.triggerStatus)) {
     await logWebhook(
       orgId,
       "ignored",
       `Status "${issueStatus}" does not match trigger "${config.triggerStatus}"`,
-      body
+      body,
     );
     return c.json({ ok: true });
   }
 
   // Check label trigger (if triggerLabels configured, at least one must match)
-  const issueLabels: string[] =
-    body.data?.labels?.map((l: { name?: string }) => l.name ?? l) ?? [];
+  const issueLabels: string[] = body.data?.labels?.map((l: { name?: string }) => l.name ?? l) ?? [];
   if (config.triggerLabels.length > 0) {
     const hasMatch = config.triggerLabels.some((tl) =>
-      issueLabels.some((il) => il.toLowerCase() === tl.toLowerCase())
+      issueLabels.some((il) => il.toLowerCase() === tl.toLowerCase()),
     );
     if (!hasMatch) {
       await logWebhook(
         orgId,
         "ignored",
         `Labels [${issueLabels.join(", ")}] don't match triggers [${config.triggerLabels.join(", ")}]`,
-        body
+        body,
       );
       return c.json({ ok: true });
     }
@@ -81,14 +76,13 @@ webhooksRouter.post("/api/webhooks/linear/:orgId", async (c) => {
   const ticketRef = body.data?.identifier ?? body.data?.id ?? "UNKNOWN";
   const title = body.data?.title ?? "Linear Issue";
   const description = body.data?.description ?? undefined;
-  const labels =
-    issueLabels.length > 0 ? issueLabels : ["linear"];
+  const labels = issueLabels.length > 0 ? issueLabels : ["linear"];
   const priority = mapLinearPriority(body.data?.priority);
 
   const result = await createDispatch(
     orgId,
     { ticketRef, title, description, labels, priority },
-    "linear"
+    "linear",
   );
 
   if ("error" in result) {
@@ -105,7 +99,7 @@ async function logWebhook(
   action: string,
   reason: string | null,
   payload: unknown,
-  dispatchId?: string
+  dispatchId?: string,
 ) {
   try {
     await db.insert(webhookLogs).values({
@@ -122,7 +116,7 @@ async function logWebhook(
 }
 
 function mapLinearPriority(
-  priority: number | null | undefined
+  priority: number | null | undefined,
 ): "low" | "medium" | "high" | "critical" {
   switch (priority) {
     case 0:
