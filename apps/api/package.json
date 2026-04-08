@@ -1,0 +1,26 @@
+{
+  "name": "@agentfleet/api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4",
+    "@hono/node-server": "^1",
+    "better-auth": "^1",
+    "drizzle-orm": "^0.41",
+    "ws": "^8.16",
+    "zod": "^3.23",
+    "@agentfleet/db": "workspace:*",
+    "@agentfleet/types": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4",
+    "@types/ws": "^8",
+    "typescript": "^5.7"
+  }
+}
