@@ -1,23 +1,56 @@
 name: Test
+
 on: [push, pull_request]
+
 jobs:
-  test:
+  api-tests:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: agentfleet_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install hub deps
+
+      - name: Install hub dependencies
         run: cd hub && npm install
-      - name: Verify hub starts
-        run: |
-          cd hub
-          node -e "
-            const s = require('./index.js');
-            setTimeout(() => { console.log('Hub started OK'); process.exit(0); }, 2000);
-          " || echo "Hub smoke test done"
-      - name: Install CLI deps
+
+      - name: Run API test suite (50 tests)
+        env:
+          DATABASE_URL: postgresql://postgres:testpass@localhost:5432/agentfleet_test
+        run: cd hub && node test.js
+
+  cli-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install CLI dependencies
         run: cd cli && npm install
-      - name: CLI help
+
+      - name: CLI help command
         run: node cli/index.js help
+
+      - name: CLI agents command (no config)
+        run: node cli/index.js agents 2>&1 || true

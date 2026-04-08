@@ -481,24 +481,39 @@ async function run() {
 // Start server, run tests, stop
 // =========================================================================
 (async () => {
-  // Set test port
+  // Set test port and DB
   process.env.PORT = String(PORT);
   process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:localdev@localhost:5433/agentfleet_test';
 
-  // Drop and recreate test DB tables
-  const db = require('./db');
-  await db.init();
-  await db.query('DROP TABLE IF EXISTS webhook_log, dispatches, invites, members, teams, _migrations CASCADE');
-  console.log('Test DB cleaned');
+  // Clean DB before tests
+  const { Pool } = require('pg');
+  const cleanPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: false,
+  });
+  try {
+    await cleanPool.query('DROP TABLE IF EXISTS webhook_log, dispatches, invites, members, teams, _migrations CASCADE');
+    console.log('Test DB cleaned');
+  } catch (e) {
+    console.log('DB clean warning:', e.message);
+  }
+  await cleanPool.end();
 
-  // Re-run migrations
-  await db.init();
-
-  // Start server
+  // Start the hub server (it handles its own DB init + migrations + seed)
   require('./index.js');
 
-  // Wait for server to be ready
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  // Wait for server to be ready (DB init + migrations + seed + HTTP listen)
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Verify server is up
+  try {
+    const check = await req('GET', '/health');
+    if (check.status !== 200) throw new Error(`Health check failed: ${check.status}`);
+    console.log('Server ready\n');
+  } catch (e) {
+    console.error('Server failed to start:', e.message);
+    process.exit(1);
+  }
 
   const exitCode = await run();
   process.exit(exitCode);
