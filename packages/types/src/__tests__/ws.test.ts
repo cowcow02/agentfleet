@@ -4,6 +4,7 @@ import {
   HeartbeatMessage,
   StatusMessage,
   CompleteMessage,
+  TelemetryMessage,
   DaemonMessage,
   DispatchCommand,
   RegisteredResponse,
@@ -53,7 +54,7 @@ describe("RegisterMessage", () => {
         type: "register",
         machine: "m1",
         agents: [{ name: "a1", tags: [], capacity: 0 }],
-      })
+      }),
     ).toThrow();
   });
 
@@ -63,7 +64,7 @@ describe("RegisterMessage", () => {
         type: "register",
         machine: "m1",
         agents: [{ name: "a1", tags: [], capacity: -1 }],
-      })
+      }),
     ).toThrow();
   });
 
@@ -73,7 +74,7 @@ describe("RegisterMessage", () => {
         type: "register",
         machine: "m1",
         agents: [{ name: "a1", tags: [], capacity: 1.5 }],
-      })
+      }),
     ).toThrow();
   });
 
@@ -83,7 +84,7 @@ describe("RegisterMessage", () => {
         type: "heartbeat",
         machine: "m1",
         agents: [],
-      })
+      }),
     ).toThrow();
   });
 });
@@ -120,7 +121,7 @@ describe("StatusMessage", () => {
         type: "status",
         timestamp: "2024-01-01T00:00:00Z",
         message: "msg",
-      })
+      }),
     ).toThrow();
   });
 });
@@ -159,7 +160,7 @@ describe("CompleteMessage", () => {
         success: true,
         exit_code: 1.5,
         duration_seconds: 10,
-      })
+      }),
     ).toThrow();
   });
 
@@ -170,8 +171,78 @@ describe("CompleteMessage", () => {
         dispatch_id: "d-1",
         exit_code: 0,
         duration_seconds: 10,
-      })
+      }),
     ).toThrow();
+  });
+});
+
+// --- TelemetryMessage ---
+
+describe("TelemetryMessage", () => {
+  const validTelemetry = {
+    type: "telemetry" as const,
+    dispatch_id: "d-1",
+    session_id: "sess-abc",
+    event_type: "assistant" as const,
+    data: { content: [{ type: "text", text: "hello" }] },
+    timestamp: "2024-01-01T00:00:00Z",
+  };
+
+  it("validates a valid telemetry message", () => {
+    const result = TelemetryMessage.parse(validTelemetry);
+    expect(result.type).toBe("telemetry");
+    expect(result.event_type).toBe("assistant");
+    expect(result.session_id).toBe("sess-abc");
+  });
+
+  it("validates all event types", () => {
+    for (const eventType of [
+      "user",
+      "assistant",
+      "attachment",
+      "tool_call",
+      "tool_result",
+      "usage",
+    ]) {
+      const result = TelemetryMessage.parse({ ...validTelemetry, event_type: eventType });
+      expect(result.event_type).toBe(eventType);
+    }
+  });
+
+  it("rejects invalid event_type", () => {
+    expect(() => TelemetryMessage.parse({ ...validTelemetry, event_type: "unknown" })).toThrow();
+  });
+
+  it("rejects missing dispatch_id", () => {
+    const { dispatch_id, ...rest } = validTelemetry;
+    expect(() => TelemetryMessage.parse(rest)).toThrow();
+  });
+
+  it("rejects missing session_id", () => {
+    const { session_id, ...rest } = validTelemetry;
+    expect(() => TelemetryMessage.parse(rest)).toThrow();
+  });
+
+  it("rejects missing data", () => {
+    const { data, ...rest } = validTelemetry;
+    expect(() => TelemetryMessage.parse(rest)).toThrow();
+  });
+
+  it("accepts empty data object", () => {
+    const result = TelemetryMessage.parse({ ...validTelemetry, data: {} });
+    expect(result.data).toEqual({});
+  });
+
+  it("accepts nested data objects", () => {
+    const result = TelemetryMessage.parse({
+      ...validTelemetry,
+      data: {
+        tool_name: "Read",
+        input: { file_path: "/foo/bar.ts" },
+        usage: { input_tokens: 100, output_tokens: 50 },
+      },
+    });
+    expect(result.data.tool_name).toBe("Read");
   });
 });
 
@@ -211,6 +282,18 @@ describe("DaemonMessage", () => {
       duration_seconds: 5,
     });
     expect(result.type).toBe("complete");
+  });
+
+  it("parses telemetry message", () => {
+    const result = DaemonMessage.parse({
+      type: "telemetry",
+      dispatch_id: "d-1",
+      session_id: "sess-1",
+      event_type: "tool_call",
+      data: { name: "Read" },
+      timestamp: "2024-01-01T00:00:00Z",
+    });
+    expect(result.type).toBe("telemetry");
   });
 
   it("rejects unknown message type", () => {
@@ -258,7 +341,7 @@ describe("DispatchCommand", () => {
 
   it("rejects missing ticket", () => {
     expect(() =>
-      DispatchCommand.parse({ type: "dispatch", dispatch_id: "d-1", agent: "a1" })
+      DispatchCommand.parse({ type: "dispatch", dispatch_id: "d-1", agent: "a1" }),
     ).toThrow();
   });
 });
@@ -277,7 +360,7 @@ describe("RegisteredResponse", () => {
 
   it("rejects non-number agents", () => {
     expect(() =>
-      RegisteredResponse.parse({ type: "registered", machine: "m1", agents: "three" })
+      RegisteredResponse.parse({ type: "registered", machine: "m1", agents: "three" }),
     ).toThrow();
   });
 });

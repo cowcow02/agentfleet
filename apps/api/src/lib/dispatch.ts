@@ -1,4 +1,4 @@
-import { db, dispatches } from "@agentfleet/db";
+import { db, dispatches, transcriptEvents } from "@agentfleet/db";
 import { eq, and } from "drizzle-orm";
 import { findAgentForDispatch } from "./machines";
 import { eventBus } from "./events";
@@ -146,6 +146,42 @@ export async function completeDispatch(
       type: status,
     });
   }
+}
+
+export type TranscriptEventType =
+  | "user"
+  | "assistant"
+  | "attachment"
+  | "tool_call"
+  | "tool_result"
+  | "usage";
+
+/** Store a transcript event from daemon JSONL tailing */
+export async function appendTranscriptEvent(
+  dispatchId: string,
+  orgId: string,
+  sessionId: string,
+  eventType: TranscriptEventType,
+  data: Record<string, unknown>,
+  timestamp: string,
+) {
+  await db.insert(transcriptEvents).values({
+    dispatchId,
+    organizationId: orgId,
+    sessionId,
+    eventType,
+    data,
+    timestamp: new Date(timestamp),
+  });
+
+  eventBus.emitTranscriptEvent({
+    orgId,
+    dispatchId,
+    sessionId,
+    eventType,
+    data,
+    timestamp,
+  });
 }
 
 /** Serialize a dispatch DB row to a plain object for JSON/SSE */

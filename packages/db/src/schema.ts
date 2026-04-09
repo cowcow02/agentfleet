@@ -80,6 +80,30 @@ export const dispatches = pgTable(
   ],
 );
 
+// --- transcript_events (parsed entries from JSONL session transcripts) ---
+
+export const transcriptEvents = pgTable(
+  "transcript_events",
+  {
+    id: serial("id").primaryKey(),
+    dispatchId: uuid("dispatch_id")
+      .notNull()
+      .references(() => dispatches.id),
+    organizationId: text("organization_id").notNull(),
+    sessionId: text("session_id").notNull(),
+    eventType: text("event_type", {
+      enum: ["user", "assistant", "attachment", "tool_call", "tool_result", "usage"],
+    }).notNull(),
+    data: jsonb("data").notNull(),
+    timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_transcript_dispatch").on(table.dispatchId),
+    index("idx_transcript_org_dispatch").on(table.organizationId, table.dispatchId),
+  ],
+);
+
 // --- integrations ---
 
 export const integrations = pgTable(

@@ -10,7 +10,7 @@ export const RegisterMessage = z.object({
       name: z.string(),
       tags: z.array(z.string()),
       capacity: z.number().int().positive(),
-    })
+    }),
   ),
 });
 export type RegisterMessage = z.infer<typeof RegisterMessage>;
@@ -37,11 +37,22 @@ export const CompleteMessage = z.object({
 });
 export type CompleteMessage = z.infer<typeof CompleteMessage>;
 
+export const TelemetryMessage = z.object({
+  type: z.literal("telemetry"),
+  dispatch_id: z.string(),
+  session_id: z.string(),
+  event_type: z.enum(["user", "assistant", "attachment", "tool_call", "tool_result", "usage"]),
+  data: z.record(z.unknown()),
+  timestamp: z.string(),
+});
+export type TelemetryMessage = z.infer<typeof TelemetryMessage>;
+
 export const DaemonMessage = z.discriminatedUnion("type", [
   RegisterMessage,
   HeartbeatMessage,
   StatusMessage,
   CompleteMessage,
+  TelemetryMessage,
 ]);
 export type DaemonMessage = z.infer<typeof DaemonMessage>;
 
