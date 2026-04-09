@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   CreateDispatchRequest,
   TicketDispatchRequest,
+  isAdHocDispatch,
   CreateDispatchResponse,
   ListDispatchesQuery,
   ListDispatchesResponse,
@@ -265,6 +266,20 @@ describe("CreateDispatchRequest", () => {
         foo: "bar",
       }),
     ).toThrow();
+  });
+
+  it("isAdHocDispatch discriminates between union arms", () => {
+    const ticket = CreateDispatchRequest.parse({
+      ticketRef: "T-9",
+      title: "T",
+      labels: ["lbl"],
+    });
+    const adhoc = CreateDispatchRequest.parse({
+      agentName: "worker-1",
+      machineName: "mac-01",
+    });
+    expect(isAdHocDispatch(ticket)).toBe(false);
+    expect(isAdHocDispatch(adhoc)).toBe(true);
   });
 });
 
