@@ -52,14 +52,37 @@ export type ProjectResponse = z.infer<typeof ProjectResponse>;
 
 // --- POST /api/dispatches ---
 
-export const CreateDispatchRequest = z.object({
+/**
+ * Ticket-based dispatch — derives target agent via label matching.
+ * Used for Linear (and other tracker) issues.
+ */
+export const TicketDispatchRequest = z.object({
   ticketRef: z.string().min(1),
   title: z.string().min(1),
   description: z.string().optional(),
   labels: z.array(z.string()).min(1, "At least one label required for agent matching"),
   priority: PriorityEnum.optional().default("medium"),
 });
+export type TicketDispatchRequest = z.infer<typeof TicketDispatchRequest>;
+
+/**
+ * Ad hoc dispatch — targets a specific agent directly by name, without tracker
+ * metadata. The UI surfaces this behind a "Manual Dispatch" modal so the
+ * ticket-based flow remains the primary path.
+ */
+export const AdHocDispatchRequest = z.object({
+  agentName: z.string().min(1),
+  machineName: z.string().min(1),
+  description: z.string().optional(),
+});
+export type AdHocDispatchRequest = z.infer<typeof AdHocDispatchRequest>;
+
+export const CreateDispatchRequest = z.union([TicketDispatchRequest, AdHocDispatchRequest]);
 export type CreateDispatchRequest = z.infer<typeof CreateDispatchRequest>;
+
+export function isAdHocDispatch(req: CreateDispatchRequest): req is AdHocDispatchRequest {
+  return "agentName" in req;
+}
 
 export const CreateDispatchResponse = z.object({
   id: z.string().uuid(),

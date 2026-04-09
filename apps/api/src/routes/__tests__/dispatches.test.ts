@@ -235,6 +235,57 @@ describe("dispatches routes", () => {
       const body = await res.json();
       expect(body.id).toBe("d-new");
     });
+
+    it("accepts ad hoc dispatch targeting a specific agent", async () => {
+      vi.mocked(createDispatch).mockResolvedValue({
+        id: "d-adhoc",
+        agentName: "worker-1",
+        machineName: "mac-mini-01",
+        status: "dispatched",
+      });
+
+      const app = createTestApp("org-test");
+      app.route("/", dispatchesRouter);
+
+      const res = await app.request("/api/dispatches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentName: "worker-1",
+          machineName: "mac-mini-01",
+          description: "One-off script",
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.id).toBe("d-adhoc");
+      // Lib should be invoked with the parsed ad hoc payload (no ticketRef/labels)
+      expect(vi.mocked(createDispatch)).toHaveBeenCalledWith(
+        "org-test",
+        expect.objectContaining({
+          agentName: "worker-1",
+          machineName: "mac-mini-01",
+          description: "One-off script",
+        }),
+        "manual",
+        expect.anything(),
+      );
+    });
+
+    it("rejects ad hoc dispatch with missing machineName", async () => {
+      const app = createTestApp("org-test");
+      app.route("/", dispatchesRouter);
+
+      const res = await app.request("/api/dispatches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentName: "worker-1",
+          description: "missing machine",
+        }),
+      });
+      expect(res.status).toBe(422);
+    });
   });
 
   describe("GET /api/dispatches/:id", () => {

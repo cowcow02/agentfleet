@@ -27,7 +27,7 @@ export function registerMachine(
   orgId: string,
   name: string,
   ws: WebSocket,
-  agents: { name: string; tags: string[]; capacity: number }[]
+  agents: { name: string; tags: string[]; capacity: number }[],
 ): Machine {
   const key = machineKey(orgId, name);
   const agentMap = new Map<string, AgentInfo>();
@@ -113,7 +113,7 @@ export function getRunningJobsForOrg(orgId: string): number {
  */
 export function findAgentForDispatch(
   orgId: string,
-  labels: string[]
+  labels: string[],
 ): { agent: AgentInfo; machine: Machine } | null {
   let bestAgent: AgentInfo | null = null;
   let bestMachine: Machine | null = null;
@@ -136,6 +136,23 @@ export function findAgentForDispatch(
     return { agent: bestAgent, machine: bestMachine };
   }
   return null;
+}
+
+/**
+ * Direct lookup for ad hoc dispatch — find a specific agent by (orgId, machineName, agentName).
+ * Returns null if the machine or agent isn't registered, or the agent has no capacity.
+ */
+export function findAgentByName(
+  orgId: string,
+  machineName: string,
+  agentName: string,
+): { agent: AgentInfo; machine: Machine } | null {
+  const machine = machines.get(machineKey(orgId, machineName));
+  if (!machine) return null;
+  const agent = machine.agents.get(agentName);
+  if (!agent) return null;
+  if (agent.running >= agent.capacity) return null;
+  return { agent, machine };
 }
 
 function emitAgentUpdate(orgId: string): void {
@@ -165,7 +182,11 @@ function cleanupStale(): void {
       machines.delete(key);
       orgsAffected.add(machine.orgId);
       if (wsOpen) {
-        try { machine.ws.close(); } catch { /* ignore */ }
+        try {
+          machine.ws.close();
+        } catch {
+          /* ignore */
+        }
       }
     }
   }

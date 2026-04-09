@@ -16,14 +16,18 @@ vi.mock("sonner", () => ({
 // Mock API
 const mockCreateDispatch = vi.fn();
 const mockFetchLinearIssues = vi.fn();
+const mockFetchAgents = vi.fn();
 vi.mock("@/lib/api", () => ({
   createDispatch: (...args: unknown[]) => mockCreateDispatch(...args),
   fetchLinearIssues: (...args: unknown[]) => mockFetchLinearIssues(...args),
+  fetchAgents: (...args: unknown[]) => mockFetchAgents(...args),
 }));
 
 beforeEach(() => {
   mockCreateDispatch.mockReset();
   mockFetchLinearIssues.mockReset();
+  mockFetchAgents.mockReset();
+  mockFetchAgents.mockResolvedValue({ agents: [], machinesOnline: 0 });
   mockToastSuccess.mockReset();
   mockToastError.mockReset();
 });
@@ -46,6 +50,34 @@ describe("DispatchForm", () => {
     mockFetchLinearIssues.mockResolvedValue({ issues: [] });
     render(<DispatchForm />);
     expect(screen.getByRole("button", { name: /manual dispatch/i })).toBeInTheDocument();
+  });
+
+  it("opens the Manual Dispatch sheet when the CTA is clicked", async () => {
+    mockFetchLinearIssues.mockResolvedValue({ issues: [] });
+    mockFetchAgents.mockResolvedValue({
+      agents: [
+        {
+          name: "worker-1",
+          machine: "mac-mini-01",
+          tags: ["frontend"],
+          capacity: 2,
+          running: 0,
+          lastHeartbeat: "2026-04-09T09:00:00Z",
+        },
+      ],
+      machinesOnline: 1,
+    });
+
+    const user = userEvent.setup();
+    render(<DispatchForm />);
+
+    await user.click(screen.getByRole("button", { name: /manual dispatch/i }));
+
+    await waitFor(() => {
+      expect(mockFetchAgents).toHaveBeenCalled();
+    });
+    // Sheet title is rendered
+    expect(screen.getAllByText(/manual dispatch/i).length).toBeGreaterThan(1);
   });
 
   it("auto-loads Linear issues on mount", async () => {
