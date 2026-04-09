@@ -215,6 +215,65 @@ describe("POST /v1/logs", () => {
     expect(res.status).toBe(401);
   });
 
+  it("rejects requests with invalid afk_ key", async () => {
+    const app = createApp();
+    const res = await app.request("/v1/logs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer afk_invalid_key",
+        "X-Dispatch-Id": VALID_DISPATCH_ID,
+      },
+      body: JSON.stringify({ resourceLogs: [] }),
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  it("stores attributes of various OTLP value types", async () => {
+    const app = createApp();
+    const res = await app.request("/v1/logs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer afk_valid_key",
+        "X-Dispatch-Id": VALID_DISPATCH_ID,
+      },
+      body: JSON.stringify({
+        resourceLogs: [
+          {
+            scopeLogs: [
+              {
+                logRecords: [
+                  {
+                    timeUnixNano: "1700000000000000000",
+                    body: { stringValue: "tool_result" },
+                    attributes: [
+                      { key: "event.type", value: { stringValue: "tool_result" } },
+                      { key: "tool.success", value: { boolValue: true } },
+                      { key: "tool.duration_ms", value: { doubleValue: 12.5 } },
+                      // Unknown OTLP value type — exercises fallback
+                      { key: "tool.tags", value: { arrayValue: { values: [] } } },
+                      // No value at all
+                      { key: "no.value" },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const event = insertedRows.find((r) => r.table === "telemetryEvents");
+    expect(event?.values.attributes["tool.success"]).toBe(true);
+    expect(event?.values.attributes["tool.duration_ms"]).toBe(12.5);
+    // Unknown type stored as the raw value object
+    expect(event?.values.attributes["tool.tags"]).toBeDefined();
+  });
+
   it("rejects requests without dispatch ID", async () => {
     const app = createApp();
     const res = await app.request("/v1/logs", {
@@ -382,6 +441,41 @@ describe("POST /v1/metrics", () => {
     });
     expect(res.status).toBe(401);
   });
+
+  it("accepts gauge metrics with asDouble values", async () => {
+    const app = createApp();
+    const res = await app.request("/v1/metrics", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer afk_valid_key",
+        "X-Dispatch-Id": VALID_DISPATCH_ID,
+      },
+      body: JSON.stringify({
+        resourceMetrics: [
+          {
+            scopeMetrics: [
+              {
+                metrics: [
+                  {
+                    name: "cost.usage",
+                    gauge: {
+                      dataPoints: [{ timeUnixNano: "1700000000000000000", asDouble: 0.045 }],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const metric = insertedRows.find((r) => r.table === "telemetryMetrics");
+    expect(metric?.values.name).toBe("cost.usage");
+    expect(metric?.values.value).toBeCloseTo(0.045);
+  });
 });
 
 describe("POST /v1/traces", () => {
@@ -433,5 +527,43 @@ describe("POST /v1/traces", () => {
       body: JSON.stringify({ resourceSpans: [] }),
     });
     expect(res.status).toBe(401);
+  });
+
+  it("stores spans with parentSpanId and status", async () => {
+    const app = createApp();
+    const res = await app.request("/v1/traces", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer afk_valid_key",
+        "X-Dispatch-Id": VALID_DISPATCH_ID,
+      },
+      body: JSON.stringify({
+        resourceSpans: [
+          {
+            scopeSpans: [
+              {
+                spans: [
+                  {
+                    traceId: "trace1",
+                    spanId: "child1",
+                    parentSpanId: "parent1",
+                    name: "child.span",
+                    startTimeUnixNano: "1700000000000000000",
+                    endTimeUnixNano: "1700000000150000000",
+                    status: { code: 2, message: "error" },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const span = insertedRows.find((r) => r.table === "telemetrySpans");
+    expect(span?.values.parentSpanId).toBe("parent1");
+    expect(span?.values.status).toEqual({ code: 2, message: "error" });
   });
 });

@@ -27,11 +27,11 @@ function getAttr(
   key: string,
 ): string | undefined {
   const kv = attrs?.find((a) => a.key === key);
-  if (!kv?.value) return undefined;
-  if (kv.value.stringValue !== undefined) return String(kv.value.stringValue);
-  if (kv.value.intValue !== undefined) return String(kv.value.intValue);
-  if (kv.value.doubleValue !== undefined) return String(kv.value.doubleValue);
-  if (kv.value.boolValue !== undefined) return String(kv.value.boolValue);
+  const v = kv?.value;
+  if (!v) return undefined;
+  if (v.stringValue !== undefined) return String(v.stringValue);
+  if (v.intValue !== undefined) return String(v.intValue);
+  if (v.doubleValue !== undefined) return String(v.doubleValue);
   return undefined;
 }
 
