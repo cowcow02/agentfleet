@@ -62,3 +62,20 @@
 **Branch:** age-6-dashboard-redesign-ticket-first
 **PR:** https://github.com/cowcow02/agentfleet/pull/2
 **Commits:** 1 (f9d4f2e)
+
+## Harness Issues
+
+<!--
+Record any friction encountered during this implementation. Format per issue:
+
+### [Phase] Brief title
+- What happened: <attempt and failure>
+- Root cause: <why the skill instruction was wrong/missing>
+- Workaround: <what you did instead>
+- Suggested fix: <specific edit to phase skill>
+- Turns wasted: <count>
+
+Leave empty if no friction occurred.
+-->
+
+(none recorded — file pre-dates the friction-recording format and was backfilled retroactively in 2026-04-09 retro)

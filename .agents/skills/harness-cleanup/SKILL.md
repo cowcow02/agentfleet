@@ -33,13 +33,17 @@ This phase only runs after the `review` phase has flipped from `waiting` to `don
    - `--squash` keeps master history linear
    - `--delete-branch` removes the remote branch (the worktree's local branch is removed in step 8)
 
-4. **Sync the main repo to merged master** — subsequent commits (e.g. cleanup section) land on up-to-date master, not on the now-stale feature branch:
+4. **Sync the main repo to merged master** — subsequent commits (e.g. cleanup section) land on up-to-date master, not on the now-stale feature branch.
+
+   The main repo is the **common dir's parent** of the worktree — `git rev-parse --git-common-dir` gives `<repo>/.git`, so its parent is the main repo root:
 
    ```bash
-   REPO_ROOT=$(git -C "$WORKTREE_PATH" worktree list --porcelain | head -1 | sed 's/worktree //')
+   REPO_ROOT=$(cd "$WORKTREE_PATH" && dirname "$(git rev-parse --git-common-dir)")
    git -C "$REPO_ROOT" fetch origin master
    git -C "$REPO_ROOT" merge --ff-only origin/master
    ```
+
+   This is more robust than parsing `git worktree list --porcelain` (which assumed the first entry was the main repo — true today but not guaranteed if the worktree ordering ever changes).
 
 5. **Verify Railway deployment** — poll API + Web healthchecks until 200 or 5-minute timeout:
 
@@ -74,7 +78,7 @@ This phase only runs after the `review` phase has flipped from `waiting` to `don
    cd "$REPO_ROOT"
    ```
 
-   Append to `.harness/conversations/<task-id>.md`:
+   **Insert before** the `## Harness Issues` marker in `.harness/conversations/<task-id>.md` (use Edit tool with `## Harness Issues` as the anchor — do NOT literally append, that would land below the issues section):
 
    ```
    ## Cleanup
@@ -83,7 +87,7 @@ This phase only runs after the `review` phase has flipped from `waiting` to `don
    **Linear final status:** Done
    ```
 
-   - **If you hit friction** (merge blocked, deploy timeout, healthcheck flake, Linear update failed, worktree dirty), append an entry to the `## Harness Issues` section at the bottom of the file.
+   - **If you hit friction** (merge blocked, deploy timeout, healthcheck flake, Linear update failed, worktree dirty), append an entry to the **literal end** of the file — it will land inside the `## Harness Issues` section since that section is last.
 
 8. **Commit the cleanup section to master:**
 

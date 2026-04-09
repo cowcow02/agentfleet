@@ -13,7 +13,7 @@ You are a state machine. Your entire behavior is determined by the state file.
 ## Loop
 
 1. **Read** the state file (path provided in your dispatch context).
-2. **Find** the first phase in `lifecycle[]` where status is NOT `"done"` and NOT `"skipped"`.
+2. **Find** the first phase in `phases[]` where status is NOT `"done"` and NOT `"skipped"`.
 3. **Check status:**
    - No such phase → announce **"WORKFLOW COMPLETE"** and stop.
    - `"waiting"` → announce what it's waiting for and stop.

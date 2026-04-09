@@ -128,7 +128,8 @@ The shared `docker compose` Postgres on port `5432` is reused (one Postgres, man
    Leave the shared `docker compose` Postgres running — other agents may still need it.
 
 9. **Record to conversation file:**
-   - Append to `.harness/conversations/<task-id>.md`:
+   - **Insert before** the `## Harness Issues` marker in `.harness/conversations/<task-id>.md` (use Edit tool with `## Harness Issues` as the anchor — do NOT literally append, that would land below the issues section):
+
      ```
      ## Verify
      **Slot:** 06 (api=9906, web=3006, db=agentfleet_age_06)
@@ -137,7 +138,8 @@ The shared `docker compose` Postgres on port `5432` is reused (one Postgres, man
      **Build:** pass/fail
      **Evidence:** <screenshot paths or response summaries>
      ```
-   - **If you hit friction** (port still in use after kill, DB drop blocked, dev server crash, slot collision), append an entry to the `## Harness Issues` section at the bottom of the file.
+
+   - **If you hit friction** (port still in use after kill, DB drop blocked, dev server crash, slot collision), append an entry to the **literal end** of the file — it will land inside the `## Harness Issues` section since that section is last.
 
 ## Checklist
 

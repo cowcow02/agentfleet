@@ -41,14 +41,16 @@ Build a clear picture of the current state — what files exist, what patterns a
    ```
 
 5. **Record to conversation file:**
-   - Append to `.harness/conversations/<task-id>.md`:
+   - **Insert before** the `## Harness Issues` marker in `.harness/conversations/<task-id>.md` (use the Edit tool with `## Harness Issues` as the anchor — do NOT literally append to the end of the file, that would land below the issues section):
+
      ```
      ## Understand
      **Scope:** <summary>
      **Files:** <list>
      **Key patterns:** <what to follow>
      ```
-   - **If you hit friction** during exploration (couldn't find expected patterns, scope unclear, repeated retries), append an entry to the `## Harness Issues` section at the bottom of the file using the documented format (phase, what happened, root cause, workaround, suggested fix, turns wasted).
+
+   - **If you hit friction** during exploration (couldn't find expected patterns, scope unclear, repeated retries), append an entry to the **literal end** of the file — it will land inside the `## Harness Issues` section since that section is last. Use the documented format (phase, what happened, root cause, workaround, suggested fix, turns wasted).
 
 ## Checklist
 

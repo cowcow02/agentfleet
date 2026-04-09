@@ -70,7 +70,8 @@ Package the work into a well-described PR linked to the Linear ticket, then watc
    - After 2 fix attempts → surface to human with the failing log
 
 7. **Record to conversation file:**
-   - Append to `.harness/conversations/<task-id>.md`:
+   - **Insert before** the `## Harness Issues` marker in `.harness/conversations/<task-id>.md` (use Edit tool with `## Harness Issues` as the anchor — do NOT literally append, that would land below the issues section):
+
      ```
      ## Ship
      **Branch:** <branch-name>
@@ -78,7 +79,8 @@ Package the work into a well-described PR linked to the Linear ticket, then watc
      **Commits:** <count>
      **CI:** pass (run: <url>) / fail
      ```
-   - **If you hit friction** (CI failed and required a fix, push rejected, PR creation failed), append an entry to the `## Harness Issues` section at the bottom of the file.
+
+   - **If you hit friction** (CI failed and required a fix, push rejected, PR creation failed), append an entry to the **literal end** of the file — it will land inside the `## Harness Issues` section since that section is last.
 
 8. **Commit & push the ship-phase conversation update** — step 7 wrote the `## Ship` section to the conversation file _after_ the initial commit in step 1, so those changes are uncommitted. Capture them in a follow-up commit so they survive worktree cleanup and are visible on the PR:
 
