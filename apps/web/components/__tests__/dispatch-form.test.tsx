@@ -29,386 +29,195 @@ beforeEach(() => {
 });
 
 describe("DispatchForm", () => {
-  it("renders Manual and Linear tabs", () => {
+  it("renders Tickets heading", () => {
+    mockFetchLinearIssues.mockResolvedValue({ issues: [] });
     render(<DispatchForm />);
-    expect(screen.getByText("Manual")).toBeInTheDocument();
-    expect(screen.getByText("From Linear")).toBeInTheDocument();
+    expect(screen.getByText("Tickets")).toBeInTheDocument();
   });
 
-  it("renders manual form fields", () => {
+  it("does not render Manual or From Linear tab buttons", () => {
+    mockFetchLinearIssues.mockResolvedValue({ issues: [] });
     render(<DispatchForm />);
-    expect(screen.getByText("Ticket ID")).toBeInTheDocument();
-    expect(screen.getByText("Title")).toBeInTheDocument();
-    expect(screen.getByText("Labels (comma-sep)")).toBeInTheDocument();
-    expect(screen.getByText("Description (optional)")).toBeInTheDocument();
+    expect(screen.queryByText("Manual")).not.toBeInTheDocument();
+    expect(screen.queryByText("From Linear")).not.toBeInTheDocument();
   });
 
-  it("has a submit button", () => {
+  it("renders a Manual Dispatch CTA button", () => {
+    mockFetchLinearIssues.mockResolvedValue({ issues: [] });
     render(<DispatchForm />);
-    expect(screen.getByRole("button", { name: "Dispatch" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /manual dispatch/i })).toBeInTheDocument();
   });
 
-  it("shows error toast when labels are empty", async () => {
-    const user = userEvent.setup();
+  it("auto-loads Linear issues on mount", async () => {
+    mockFetchLinearIssues.mockResolvedValue({ issues: [] });
     render(<DispatchForm />);
-
-    await user.type(screen.getByPlaceholderText("KIP-301"), "KIP-1");
-    await user.type(screen.getByPlaceholderText("Describe the ticket"), "Test task");
-    await user.type(screen.getByPlaceholderText("backend, feature"), "  , , ");
-
-    await user.click(screen.getByRole("button", { name: "Dispatch" }));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith(
-        "At least one label is required for agent matching",
-      );
+      expect(mockFetchLinearIssues).toHaveBeenCalledTimes(1);
     });
-    expect(mockCreateDispatch).not.toHaveBeenCalled();
   });
 
-  it("calls createDispatch on valid submit", async () => {
+  it("shows loading state while fetching", () => {
+    mockFetchLinearIssues.mockReturnValue(new Promise(() => {})); // never resolves
+    render(<DispatchForm />);
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+  });
+
+  it("loads and displays issues", async () => {
+    mockFetchLinearIssues.mockResolvedValue({
+      issues: [
+        {
+          identifier: "LIN-1",
+          title: "Linear issue 1",
+          description: null,
+          state: "In Progress",
+          labels: ["bug"],
+          priority: 1,
+          assignee: null,
+          url: "https://linear.app/issue/LIN-1",
+        },
+      ],
+    });
+
+    render(<DispatchForm />);
+
+    await waitFor(() => {
+      expect(screen.getByText("LIN-1")).toBeInTheDocument();
+      expect(screen.getByText("Linear issue 1")).toBeInTheDocument();
+      expect(screen.getByText(/In Progress/)).toBeInTheDocument();
+      expect(screen.getByText(/bug/)).toBeInTheDocument();
+    });
+  });
+
+  it("dispatches selected issue", async () => {
+    mockFetchLinearIssues.mockResolvedValue({
+      issues: [
+        {
+          identifier: "LIN-1",
+          title: "Linear issue 1",
+          description: "some desc",
+          state: "In Progress",
+          labels: ["bug", "frontend"],
+          priority: 1,
+          assignee: null,
+          url: "https://linear.app/issue/LIN-1",
+        },
+      ],
+    });
     mockCreateDispatch.mockResolvedValue({
-      id: "uuid-1",
-      agentName: "agent-1",
-      machineName: "machine-1",
+      id: "uuid-2",
+      agentName: "agent-2",
+      machineName: "machine-2",
       status: "dispatched",
     });
 
     const user = userEvent.setup();
     render(<DispatchForm />);
 
-    await user.type(screen.getByPlaceholderText("KIP-301"), "KIP-301");
-    await user.type(screen.getByPlaceholderText("Describe the ticket"), "Implement auth");
-    await user.type(screen.getByPlaceholderText("backend, feature"), "frontend, react");
-    await user.type(
-      screen.getByPlaceholderText("Additional context for the agent..."),
-      "Some details",
-    );
+    await waitFor(() => {
+      expect(screen.getByText("LIN-1")).toBeInTheDocument();
+    });
 
-    await user.click(screen.getByRole("button", { name: "Dispatch" }));
+    const dispatchBtn = screen.getByRole("button", { name: "Dispatch" });
+    await user.click(dispatchBtn);
 
     await waitFor(() => {
       expect(mockCreateDispatch).toHaveBeenCalledWith({
-        ticketRef: "KIP-301",
-        title: "Implement auth",
-        description: "Some details",
-        labels: ["frontend", "react"],
+        ticketRef: "LIN-1",
+        title: "Linear issue 1",
+        description: "some desc",
+        labels: ["bug", "frontend"],
         priority: "medium",
       });
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith("Dispatched to agent-1 on machine-1");
+    expect(mockToastSuccess).toHaveBeenCalledWith("Dispatched to agent-2 on machine-2");
   });
 
-  it("shows error toast on API failure", async () => {
-    mockCreateDispatch.mockRejectedValue(new Error("Server error"));
+  it("shows error message on fetch issues failure", async () => {
+    mockFetchLinearIssues.mockRejectedValue(new Error("No config"));
+
+    render(<DispatchForm />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No config/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows generic error message on non-Error fetch failure", async () => {
+    mockFetchLinearIssues.mockRejectedValue("unknown");
+
+    render(<DispatchForm />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to load issues/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows no matching issues message when loaded and empty", async () => {
+    mockFetchLinearIssues.mockResolvedValue({ issues: [] });
+
+    render(<DispatchForm />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/no matching issues/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows error toast on dispatch failure", async () => {
+    mockFetchLinearIssues.mockResolvedValue({
+      issues: [
+        {
+          identifier: "LIN-5",
+          title: "Fail issue",
+          description: null,
+          state: "Todo",
+          labels: ["bug"],
+          priority: 1,
+          assignee: null,
+          url: "https://linear.app/issue/LIN-5",
+        },
+      ],
+    });
+    mockCreateDispatch.mockRejectedValue(new Error("Agent busy"));
 
     const user = userEvent.setup();
     render(<DispatchForm />);
 
-    await user.type(screen.getByPlaceholderText("KIP-301"), "KIP-1");
-    await user.type(screen.getByPlaceholderText("Describe the ticket"), "Test");
-    await user.type(screen.getByPlaceholderText("backend, feature"), "backend");
+    await waitFor(() => {
+      expect(screen.getByText("LIN-5")).toBeInTheDocument();
+    });
 
     await user.click(screen.getByRole("button", { name: "Dispatch" }));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("Server error");
+      expect(mockToastError).toHaveBeenCalledWith("Agent busy");
     });
   });
 
-  it("resets form after successful submit", async () => {
-    mockCreateDispatch.mockResolvedValue({
-      id: "uuid-1",
-      agentName: "agent-1",
-      machineName: "machine-1",
-      status: "dispatched",
+  it("shows generic error toast on dispatch failure with non-Error", async () => {
+    mockFetchLinearIssues.mockResolvedValue({
+      issues: [
+        {
+          identifier: "LIN-6",
+          title: "Fail issue 2",
+          description: null,
+          state: "Todo",
+          labels: [],
+          priority: 1,
+          assignee: null,
+          url: "https://linear.app/issue/LIN-6",
+        },
+      ],
     });
-
-    const user = userEvent.setup();
-    render(<DispatchForm />);
-
-    const ticketInput = screen.getByPlaceholderText("KIP-301");
-    const titleInput = screen.getByPlaceholderText("Describe the ticket");
-
-    await user.type(ticketInput, "KIP-1");
-    await user.type(titleInput, "Test");
-    await user.type(screen.getByPlaceholderText("backend, feature"), "tag");
-
-    await user.click(screen.getByRole("button", { name: "Dispatch" }));
-
-    await waitFor(() => {
-      expect(ticketInput).toHaveValue("");
-      expect(titleInput).toHaveValue("");
-    });
-  });
-
-  describe("Linear tab", () => {
-    it("auto-loads issues when switching to Linear tab", async () => {
-      mockFetchLinearIssues.mockResolvedValue({ issues: [] });
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-
-      await waitFor(() => {
-        expect(mockFetchLinearIssues).toHaveBeenCalled();
-      });
-    });
-
-    it("loads and displays issues", async () => {
-      mockFetchLinearIssues.mockResolvedValue({
-        issues: [
-          {
-            identifier: "LIN-1",
-            title: "Linear issue 1",
-            description: null,
-            state: "In Progress",
-            labels: ["bug"],
-            priority: 1,
-            assignee: null,
-            url: "https://linear.app/issue/LIN-1",
-          },
-        ],
-      });
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-
-      await waitFor(() => {
-        expect(screen.getByText("LIN-1")).toBeInTheDocument();
-        expect(screen.getByText("Linear issue 1")).toBeInTheDocument();
-        expect(screen.getByText(/In Progress/)).toBeInTheDocument();
-        expect(screen.getByText(/bug/)).toBeInTheDocument();
-      });
-    });
-
-    it("dispatches selected Linear issue", async () => {
-      mockFetchLinearIssues.mockResolvedValue({
-        issues: [
-          {
-            identifier: "LIN-1",
-            title: "Linear issue 1",
-            description: "some desc",
-            state: "In Progress",
-            labels: ["bug", "frontend"],
-            priority: 1,
-            assignee: null,
-            url: "https://linear.app/issue/LIN-1",
-          },
-        ],
-      });
-      mockCreateDispatch.mockResolvedValue({
-        id: "uuid-2",
-        agentName: "agent-2",
-        machineName: "machine-2",
-        status: "dispatched",
-      });
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-
-      await waitFor(() => {
-        expect(screen.getByText("LIN-1")).toBeInTheDocument();
-      });
-
-      // Click the Dispatch button next to the issue
-      const dispatchBtn = screen.getByRole("button", { name: "Dispatch" });
-      await user.click(dispatchBtn);
-
-      await waitFor(() => {
-        expect(mockCreateDispatch).toHaveBeenCalledWith({
-          ticketRef: "LIN-1",
-          title: "Linear issue 1",
-          description: "some desc",
-          labels: ["bug", "frontend"],
-          priority: "medium",
-        });
-      });
-
-      expect(mockToastSuccess).toHaveBeenCalledWith("Dispatched to agent-2 on machine-2");
-    });
-
-    it("shows error message on fetch issues failure", async () => {
-      mockFetchLinearIssues.mockRejectedValue(new Error("No config"));
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-
-      await waitFor(() => {
-        expect(screen.getByText(/No config/)).toBeInTheDocument();
-      });
-    });
-
-    it("shows generic error message on non-Error fetch failure", async () => {
-      mockFetchLinearIssues.mockRejectedValue("unknown");
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-
-      await waitFor(() => {
-        expect(screen.getByText(/Failed to load Linear issues/)).toBeInTheDocument();
-      });
-    });
-
-    it("does not reload issues when switching to linear tab again", async () => {
-      mockFetchLinearIssues.mockResolvedValue({ issues: [] });
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-      await waitFor(() => {
-        expect(mockFetchLinearIssues).toHaveBeenCalledTimes(1);
-      });
-
-      // Switch back to manual and then to linear again
-      await user.click(screen.getByText("Manual"));
-      await user.click(screen.getByText("From Linear"));
-
-      // Should not fetch again since linearLoaded is true
-      expect(mockFetchLinearIssues).toHaveBeenCalledTimes(1);
-    });
-
-    it("shows no matching issues message when loaded and empty", async () => {
-      mockFetchLinearIssues.mockResolvedValue({ issues: [] });
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-
-      await waitFor(() => {
-        expect(screen.getByText("No matching issues found in Linear.")).toBeInTheDocument();
-      });
-    });
-
-    it("shows error toast on linear dispatch failure with Error", async () => {
-      mockFetchLinearIssues.mockResolvedValue({
-        issues: [
-          {
-            identifier: "LIN-5",
-            title: "Fail issue",
-            description: null,
-            state: "Todo",
-            labels: ["bug"],
-            priority: 1,
-            assignee: null,
-            url: "https://linear.app/issue/LIN-5",
-          },
-        ],
-      });
-      mockCreateDispatch.mockRejectedValue(new Error("Agent busy"));
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-      await waitFor(() => {
-        expect(screen.getByText("LIN-5")).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: "Dispatch" }));
-
-      await waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith("Agent busy");
-      });
-    });
-
-    it("shows generic error toast on linear dispatch failure with non-Error", async () => {
-      mockFetchLinearIssues.mockResolvedValue({
-        issues: [
-          {
-            identifier: "LIN-6",
-            title: "Fail issue 2",
-            description: null,
-            state: "Todo",
-            labels: [],
-            priority: 1,
-            assignee: null,
-            url: "https://linear.app/issue/LIN-6",
-          },
-        ],
-      });
-      mockCreateDispatch.mockRejectedValue("unknown");
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-      await waitFor(() => {
-        expect(screen.getByText("LIN-6")).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: "Dispatch" }));
-
-      await waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith("Dispatch failed");
-      });
-    });
-
-    it("dispatches issue with null description as undefined", async () => {
-      mockFetchLinearIssues.mockResolvedValue({
-        issues: [
-          {
-            identifier: "LIN-7",
-            title: "No desc issue",
-            description: null,
-            state: "Todo",
-            labels: ["frontend"],
-            priority: 1,
-            assignee: null,
-            url: "https://linear.app/issue/LIN-7",
-          },
-        ],
-      });
-      mockCreateDispatch.mockResolvedValue({
-        id: "uuid-3",
-        agentName: "agent-3",
-        machineName: "machine-3",
-        status: "dispatched",
-      });
-
-      const user = userEvent.setup();
-      render(<DispatchForm />);
-
-      await user.click(screen.getByText("From Linear"));
-      await waitFor(() => {
-        expect(screen.getByText("LIN-7")).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: "Dispatch" }));
-
-      await waitFor(() => {
-        expect(mockCreateDispatch).toHaveBeenCalledWith({
-          ticketRef: "LIN-7",
-          title: "No desc issue",
-          description: undefined,
-          labels: ["frontend"],
-          priority: "medium",
-        });
-      });
-    });
-  });
-
-  it("shows generic error toast on manual dispatch failure with non-Error", async () => {
     mockCreateDispatch.mockRejectedValue("unknown");
 
     const user = userEvent.setup();
     render(<DispatchForm />);
 
-    await user.type(screen.getByPlaceholderText("KIP-301"), "KIP-1");
-    await user.type(screen.getByPlaceholderText("Describe the ticket"), "Test");
-    await user.type(screen.getByPlaceholderText("backend, feature"), "backend");
+    await waitFor(() => {
+      expect(screen.getByText("LIN-6")).toBeInTheDocument();
+    });
 
     await user.click(screen.getByRole("button", { name: "Dispatch" }));
 
@@ -417,52 +226,45 @@ describe("DispatchForm", () => {
     });
   });
 
-  it("submits without description when field is empty", async () => {
+  it("dispatches issue with null description as undefined", async () => {
+    mockFetchLinearIssues.mockResolvedValue({
+      issues: [
+        {
+          identifier: "LIN-7",
+          title: "No desc issue",
+          description: null,
+          state: "Todo",
+          labels: ["frontend"],
+          priority: 1,
+          assignee: null,
+          url: "https://linear.app/issue/LIN-7",
+        },
+      ],
+    });
     mockCreateDispatch.mockResolvedValue({
-      id: "uuid-4",
-      agentName: "agent-4",
-      machineName: "machine-4",
+      id: "uuid-3",
+      agentName: "agent-3",
+      machineName: "machine-3",
       status: "dispatched",
     });
 
     const user = userEvent.setup();
     render(<DispatchForm />);
 
-    await user.type(screen.getByPlaceholderText("KIP-301"), "KIP-99");
-    await user.type(screen.getByPlaceholderText("Describe the ticket"), "No desc");
-    await user.type(screen.getByPlaceholderText("backend, feature"), "backend");
+    await waitFor(() => {
+      expect(screen.getByText("LIN-7")).toBeInTheDocument();
+    });
 
     await user.click(screen.getByRole("button", { name: "Dispatch" }));
 
     await waitFor(() => {
-      expect(mockCreateDispatch).toHaveBeenCalledWith(
-        expect.objectContaining({ description: undefined }),
-      );
-    });
-  });
-
-  it("can change priority select", async () => {
-    mockCreateDispatch.mockResolvedValue({
-      id: "uuid-5",
-      agentName: "agent-5",
-      machineName: "machine-5",
-      status: "dispatched",
-    });
-
-    const user = userEvent.setup();
-    render(<DispatchForm />);
-
-    await user.type(screen.getByPlaceholderText("KIP-301"), "KIP-99");
-    await user.type(screen.getByPlaceholderText("Describe the ticket"), "High prio");
-    await user.type(screen.getByPlaceholderText("backend, feature"), "backend");
-    await user.selectOptions(screen.getByDisplayValue("Medium"), "high");
-
-    await user.click(screen.getByRole("button", { name: "Dispatch" }));
-
-    await waitFor(() => {
-      expect(mockCreateDispatch).toHaveBeenCalledWith(
-        expect.objectContaining({ priority: "high" }),
-      );
+      expect(mockCreateDispatch).toHaveBeenCalledWith({
+        ticketRef: "LIN-7",
+        title: "No desc issue",
+        description: undefined,
+        labels: ["frontend"],
+        priority: "medium",
+      });
     });
   });
 });

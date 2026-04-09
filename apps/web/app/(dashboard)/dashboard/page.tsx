@@ -6,20 +6,13 @@ import { useSSE } from "@/lib/use-sse";
 import { StatsCards } from "@/components/stats-cards";
 import { DispatchForm } from "@/components/dispatch-form";
 import Link from "next/link";
-import type {
-  DashboardStatsResponse,
-  Agent,
-  SseEvent,
-  Dispatch,
-} from "@agentfleet/types";
+import type { DashboardStatsResponse, Agent, SseEvent, Dispatch } from "@agentfleet/types";
 
 interface FeedItem {
   message: string;
   timestamp: string;
   type: string;
 }
-
-const knownTags = ["backend", "be", "api", "frontend", "fe", "bug", "feature", "question", "explore", "simple", "refactor"];
 
 function tagClass(tag: string): string {
   const t = tag.toLowerCase();
@@ -47,7 +40,11 @@ const statusBgMap: Record<string, string> = {
 };
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function DashboardPage() {
@@ -71,9 +68,7 @@ export default function DashboardPage() {
         break;
       case "dispatch:update":
         setRecentDispatches((prev) => {
-          const existing = prev.findIndex(
-            (d) => d.id === event.data.dispatch.id,
-          );
+          const existing = prev.findIndex((d) => d.id === event.data.dispatch.id);
           if (existing >= 0) {
             const updated = [...prev];
             updated[existing] = event.data.dispatch;
@@ -89,7 +84,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const { connected } = useSSE(handleSSE);
+  useSSE(handleSSE);
 
   return (
     <div>
@@ -99,17 +94,20 @@ export default function DashboardPage() {
       </h1>
 
       {/* Stats */}
-      <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 28 }}>
         <StatsCards stats={stats} />
       </div>
 
-      {/* Dispatch form */}
-      <div style={{ marginBottom: 28 }}>
+      {/* Tickets — primary content area */}
+      <div style={{ marginBottom: 24 }}>
         <DispatchForm />
       </div>
 
-      {/* Fleet Overview + Live Feed side by side */}
-      <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+      {/* Secondary panels: Fleet + Live Feed + Recent Dispatches */}
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 24 }}
+      >
         {/* Fleet overview panel */}
         <div className="af-panel">
           <div className="af-panel-header">
@@ -118,9 +116,11 @@ export default function DashboardPage() {
               {agents.length} agents
             </span>
           </div>
-          <div style={{ padding: 8, maxHeight: 380, overflowY: "auto" }}>
+          <div style={{ padding: 8, maxHeight: 320, overflowY: "auto" }}>
             {agents.length === 0 ? (
-              <div className="af-empty" style={{ padding: 36 }}>Waiting for agents...</div>
+              <div className="af-empty" style={{ padding: 28 }}>
+                Waiting for agents...
+              </div>
             ) : (
               <div>
                 {agents.map((agent) => {
@@ -131,8 +131,8 @@ export default function DashboardPage() {
                       className="grid items-center"
                       style={{
                         gridTemplateColumns: "10px 1fr auto",
-                        gap: 14,
-                        padding: "12px 14px",
+                        gap: 12,
+                        padding: "10px 14px",
                         borderRadius: 8,
                         marginBottom: 2,
                         transition: "background 0.1s",
@@ -145,15 +145,15 @@ export default function DashboardPage() {
                         e.currentTarget.style.background = "transparent";
                       }}
                     >
-                      <div
-                        className={`af-dot ${isIdle ? "af-dot-online" : "af-dot-busy"}`}
-                      />
+                      <div className={`af-dot ${isIdle ? "af-dot-online" : "af-dot-busy"}`} />
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 600 }}>{agent.name}</div>
-                        <div style={{ fontSize: 12, color: "var(--af-text-secondary)", marginTop: 2 }}>
+                        <div
+                          style={{ fontSize: 11, color: "var(--af-text-secondary)", marginTop: 2 }}
+                        >
                           {agent.machine}
                         </div>
-                        <div className="flex gap-1.5 flex-wrap" style={{ marginTop: 5 }}>
+                        <div className="flex gap-1.5 flex-wrap" style={{ marginTop: 4 }}>
                           {agent.tags.map((tag) => (
                             <span key={tag} className={tagClass(tag)}>
                               {tag}
@@ -195,9 +195,11 @@ export default function DashboardPage() {
               {feedItems.length} events
             </span>
           </div>
-          <div style={{ padding: 8, maxHeight: 380, overflowY: "auto" }}>
+          <div style={{ padding: 8, maxHeight: 320, overflowY: "auto" }}>
             {feedItems.length === 0 ? (
-              <div className="af-empty" style={{ padding: 36 }}>No events yet</div>
+              <div className="af-empty" style={{ padding: 28 }}>
+                No events yet
+              </div>
             ) : (
               <div>
                 {feedItems.map((item, i) => (
@@ -206,7 +208,7 @@ export default function DashboardPage() {
                     className="flex items-baseline"
                     style={{
                       gap: 10,
-                      padding: "8px 14px",
+                      padding: "7px 14px",
                       fontSize: 13,
                       borderRadius: 6,
                       marginBottom: 2,
@@ -249,109 +251,95 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Recent Dispatches panel */}
-      <div className="af-panel" style={{ marginBottom: 32 }}>
-        <div className="af-panel-header">
-          <span>Recent Dispatches</span>
-          <span style={{ fontSize: 12, fontWeight: 400, color: "var(--af-text-secondary)" }}>
-            {recentDispatches.length}
-          </span>
-        </div>
-        <div style={{ padding: 8, maxHeight: 500, overflowY: "auto" }}>
-          {recentDispatches.length === 0 ? (
-            <div className="af-empty" style={{ padding: 36 }}>
-              No dispatches yet. Use the form above to send a ticket.
-            </div>
-          ) : (
-            <div>
-              {recentDispatches.map((d) => {
-                const source = d.source || "manual";
-                return (
-                  <div
-                    key={d.id}
-                    style={{
-                      padding: "14px 16px",
-                      borderRadius: 8,
-                      marginBottom: 4,
-                      borderLeft: `3px solid ${statusColorMap[d.status] || "var(--border)"}`,
-                      transition: "background 0.1s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "var(--af-surface-hover)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                    }}
-                  >
-                    <div className="flex justify-between items-center" style={{ marginBottom: 6 }}>
-                      <div className="flex items-center">
+        {/* Recent Dispatches panel */}
+        <div className="af-panel">
+          <div className="af-panel-header">
+            <span>Recent Dispatches</span>
+            <span style={{ fontSize: 12, fontWeight: 400, color: "var(--af-text-secondary)" }}>
+              {recentDispatches.length}
+            </span>
+          </div>
+          <div style={{ padding: 8, maxHeight: 320, overflowY: "auto" }}>
+            {recentDispatches.length === 0 ? (
+              <div className="af-empty" style={{ padding: 28 }}>
+                No dispatches yet.
+              </div>
+            ) : (
+              <div>
+                {recentDispatches.map((d) => {
+                  return (
+                    <div
+                      key={d.id}
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: 8,
+                        marginBottom: 4,
+                        borderLeft: `3px solid ${statusColorMap[d.status] || "var(--border)"}`,
+                        transition: "background 0.1s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "var(--af-surface-hover)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      <div
+                        className="flex justify-between items-center"
+                        style={{ marginBottom: 4 }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              fontFamily: "'SF Mono', monospace",
+                              fontSize: 12,
+                            }}
+                          >
+                            {d.ticketRef}
+                          </span>
+                          <span
+                            style={{
+                              color: "var(--af-text-secondary)",
+                              fontSize: 12,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              maxWidth: 140,
+                            }}
+                          >
+                            {d.title}
+                          </span>
+                        </div>
                         <span
                           style={{
-                            fontWeight: 600,
-                            fontFamily: "'SF Mono', monospace",
-                            fontSize: 13,
-                          }}
-                        >
-                          {d.ticketRef}
-                        </span>
-                        <span
-                          style={{
-                            color: "var(--af-text-secondary)",
-                            marginLeft: 10,
-                            fontSize: 13,
-                          }}
-                        >
-                          {d.title}
-                        </span>
-                        <span
-                          style={{
-                            display: "inline-block",
                             fontSize: 10,
                             fontWeight: 500,
                             padding: "2px 8px",
                             borderRadius: 100,
-                            marginLeft: 8,
-                            background: source === "linear" ? "var(--af-info-subtle)" : "var(--af-accent-subtle)",
-                            color: source === "linear" ? "var(--af-info)" : "var(--af-accent)",
+                            background: statusBgMap[d.status] || "var(--af-border-subtle)",
+                            color: statusColorMap[d.status] || "var(--af-text-secondary)",
                           }}
                         >
-                          {source === "linear" ? "Linear" : "Manual"}
+                          {d.status}
                         </span>
                       </div>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 500,
-                          padding: "3px 10px",
-                          borderRadius: 100,
-                          background: statusBgMap[d.status] || "var(--af-border-subtle)",
-                          color: statusColorMap[d.status] || "var(--af-text-secondary)",
-                        }}
-                      >
-                        {d.status}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 12, color: "var(--af-text-secondary)", marginTop: 4 }}>
-                      <span style={{ color: "var(--af-accent)" }}>{d.agentName}</span>
-                      {" \u2014 "}
-                      <span style={{ color: "var(--af-text-tertiary)" }}>
+                      <div style={{ fontSize: 11, color: "var(--af-text-tertiary)" }}>
+                        <span style={{ color: "var(--af-accent)" }}>{d.agentName}</span>
+                        {" \u2014 "}
                         {formatTime(d.createdAt)}
-                      </span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <Link href="/dispatches" className="af-view-all">
+            View all dispatches &rarr;
+          </Link>
         </div>
-        <Link
-          href="/dispatches"
-          className="af-view-all"
-        >
-          View all dispatches &rarr;
-        </Link>
       </div>
     </div>
   );
