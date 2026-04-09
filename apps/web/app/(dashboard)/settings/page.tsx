@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { organization, apiKey, useSession } from "@/lib/auth-client";
 import { LinearConfig } from "@/components/linear-config";
-import { fetchProjects } from "@/lib/api";
+import { createProject, fetchProjects } from "@/lib/api";
 import type { Project } from "@agentfleet/types";
 import { Copy, Trash2, UserPlus, Plus } from "lucide-react";
 
@@ -36,6 +36,8 @@ export default function SettingsPage() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [creatingProject, setCreatingProject] = useState(false);
 
   useEffect(() => {
     loadMembers();
@@ -53,6 +55,24 @@ export default function SettingsPage() {
       }
     } catch {
       // Ignore
+    }
+  }
+
+  async function handleCreateProject(e: React.FormEvent) {
+    e.preventDefault();
+    const name = newProjectName.trim();
+    if (!name) return;
+    setCreatingProject(true);
+    try {
+      const project = await createProject({ name });
+      setProjects((prev) => [...prev, project]);
+      setSelectedProjectId(project.id);
+      setNewProjectName("");
+      toast.success(`Project "${project.name}" created`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create project");
+    } finally {
+      setCreatingProject(false);
     }
   }
 
@@ -468,41 +488,64 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Linear Integration — per project */}
-      {projects.length === 0 ? (
-        <div className="af-section" style={{ marginBottom: 24 }}>
-          <div className="af-section-header">Linear Integration</div>
-          <div className="af-section-body">
-            <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>
-              Create a project first to configure Linear integration.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="af-section" style={{ marginBottom: 12 }}>
-            <div className="af-section-header">Project</div>
-            <div className="af-section-body">
-              <div className="flex flex-col" style={{ gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
-                  Configure tracker for
-                </label>
-                <select
-                  value={selectedProjectId ?? ""}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      {/* Projects */}
+      <div className="af-section" style={{ marginBottom: 24 }}>
+        <div className="af-section-header">Projects</div>
+        <div className="af-section-body">
+          {projects.length > 0 && (
+            <div className="flex flex-col" style={{ gap: 6, marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                Configure tracker for
+              </label>
+              <select
+                value={selectedProjectId ?? ""}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
-          {selectedProjectId && <LinearConfig projectId={selectedProjectId} />}
-        </>
-      )}
+          )}
+          {projects.length === 0 && (
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--af-text-secondary)",
+                marginBottom: 16,
+              }}
+            >
+              No projects yet. Create one below to configure a tracker integration.
+            </p>
+          )}
+          <form onSubmit={handleCreateProject} className="flex items-end" style={{ gap: 12 }}>
+            <div className="flex flex-col flex-1" style={{ gap: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                New project name
+              </label>
+              <input
+                placeholder="My Team"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={creatingProject || !newProjectName.trim()}
+              className="af-btn-primary"
+            >
+              <Plus className="h-3.5 w-3.5 inline mr-1" />
+              {creatingProject ? "Creating..." : "Create"}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Linear Integration — per selected project */}
+      {selectedProjectId && <LinearConfig projectId={selectedProjectId} />}
     </div>
   );
 }

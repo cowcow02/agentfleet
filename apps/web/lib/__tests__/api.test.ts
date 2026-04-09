@@ -9,6 +9,7 @@ import {
   fetchDispatches,
   fetchDispatch,
   createDispatch,
+  createProject,
   fetchAgents,
   fetchLinearConfig,
   updateLinearConfig,
@@ -178,6 +179,29 @@ describe("api client", () => {
       const result = await fetchAgents();
       expect(mockFetch).toHaveBeenCalledWith("/api/agents", expect.any(Object));
       expect(result).toEqual(data);
+    });
+  });
+
+  describe("createProject", () => {
+    it("calls POST /api/projects with body and returns the new project", async () => {
+      const body = { name: "My Project" };
+      const response = {
+        id: "proj-1",
+        organizationId: "org-1",
+        name: "My Project",
+        slug: "my-project",
+        trackerType: null,
+        trackerConfig: null,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z",
+      };
+      mockFetch.mockResolvedValue(jsonResponse(response));
+      const result = await createProject(body);
+      const [url, opts] = mockFetch.mock.calls[0];
+      expect(url).toBe("/api/projects");
+      expect(opts.method).toBe("POST");
+      expect(JSON.parse(opts.body)).toEqual(body);
+      expect(result).toEqual(response);
     });
   });
 

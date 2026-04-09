@@ -1,10 +1,12 @@
 import type {
   CreateDispatchRequest,
   CreateDispatchResponse,
+  CreateProjectRequest,
   ListDispatchesResponse,
   DashboardStatsResponse,
   ListAgentsResponse,
   LinearConfigResponse,
+  Project,
   UpdateLinearConfigRequest,
   ListLinearIssuesResponse,
   ListProjectsResponse,
@@ -96,6 +98,13 @@ export function fetchAgents(): Promise<ListAgentsResponse> {
 
 export function fetchProjects(): Promise<ListProjectsResponse> {
   return request<ListProjectsResponse>("/api/projects");
+}
+
+export function createProject(data: CreateProjectRequest): Promise<Project> {
+  return request<Project>("/api/projects", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 // --- Linear Integration (project-scoped) ---
