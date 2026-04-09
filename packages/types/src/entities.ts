@@ -52,7 +52,7 @@ export const DispatchSchema = z.object({
   exitCode: z.number().int().nullable(),
   durationMs: z.number().int().nullable(),
   messages: z.array(DispatchMessageSchema),
-  usage: DispatchUsageSchema.nullable(),
+  usage: DispatchUsageSchema.nullish(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
