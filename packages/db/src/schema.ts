@@ -8,6 +8,8 @@ import {
   jsonb,
   index,
   uniqueIndex,
+  doublePrecision,
+  bigint,
 } from "drizzle-orm/pg-core";
 
 // --- projects ---
@@ -60,6 +62,15 @@ export const dispatches = pgTable(
     exitCode: integer("exit_code"),
     durationMs: integer("duration_ms"),
     messages: jsonb("messages").$type<{ message: string; timestamp: string }[]>().default([]),
+    usage: jsonb("usage").$type<{
+      input_tokens: number;
+      output_tokens: number;
+      cache_read_input_tokens: number;
+      cache_creation_input_tokens: number;
+      cost_usd: number;
+      model_requests: number;
+      tool_calls: number;
+    }>(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -118,4 +129,80 @@ export const webhookLogs = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index("idx_webhook_logs_org").on(table.organizationId)],
+);
+
+// --- telemetry_events (OTLP log records) ---
+
+export const telemetryEvents = pgTable(
+  "telemetry_events",
+  {
+    id: serial("id").primaryKey(),
+    dispatchId: uuid("dispatch_id")
+      .references(() => dispatches.id)
+      .notNull(),
+    organizationId: text("organization_id").notNull(),
+    eventType: text("event_type").notNull(), // user_prompt, tool_result, api_request, api_error, tool_decision
+    severity: text("severity"), // OTLP severity text
+    body: jsonb("body").notNull(), // full OTLP log record body
+    attributes: jsonb("attributes"), // OTLP resource/log attributes
+    timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_telemetry_events_dispatch").on(table.dispatchId),
+    index("idx_telemetry_events_org").on(table.organizationId),
+    index("idx_telemetry_events_type").on(table.eventType),
+  ],
+);
+
+// --- telemetry_metrics (OTLP metrics) ---
+
+export const telemetryMetrics = pgTable(
+  "telemetry_metrics",
+  {
+    id: serial("id").primaryKey(),
+    dispatchId: uuid("dispatch_id")
+      .references(() => dispatches.id)
+      .notNull(),
+    organizationId: text("organization_id").notNull(),
+    name: text("name").notNull(), // token.usage, cost.usage, etc.
+    value: doublePrecision("value").notNull(),
+    unit: text("unit"),
+    attributes: jsonb("attributes"), // OTLP metric attributes (model, type, etc.)
+    timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_telemetry_metrics_dispatch").on(table.dispatchId),
+    index("idx_telemetry_metrics_org").on(table.organizationId),
+    index("idx_telemetry_metrics_name").on(table.name),
+  ],
+);
+
+// --- telemetry_spans (OTLP trace spans) ---
+
+export const telemetrySpans = pgTable(
+  "telemetry_spans",
+  {
+    id: serial("id").primaryKey(),
+    dispatchId: uuid("dispatch_id")
+      .references(() => dispatches.id)
+      .notNull(),
+    organizationId: text("organization_id").notNull(),
+    traceId: text("trace_id").notNull(),
+    spanId: text("span_id").notNull(),
+    parentSpanId: text("parent_span_id"),
+    name: text("name").notNull(),
+    kind: integer("kind"), // OTLP SpanKind
+    status: jsonb("status"), // { code, message }
+    attributes: jsonb("attributes"),
+    startTime: timestamp("start_time", { withTimezone: true }).notNull(),
+    endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_telemetry_spans_dispatch").on(table.dispatchId),
+    index("idx_telemetry_spans_org").on(table.organizationId),
+    index("idx_telemetry_spans_trace").on(table.traceId),
+  ],
 );

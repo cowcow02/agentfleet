@@ -25,6 +25,17 @@ export const DispatchMessageSchema = z.object({
 });
 export type DispatchMessage = z.infer<typeof DispatchMessageSchema>;
 
+export const DispatchUsageSchema = z.object({
+  input_tokens: z.number().int().default(0),
+  output_tokens: z.number().int().default(0),
+  cache_read_input_tokens: z.number().int().default(0),
+  cache_creation_input_tokens: z.number().int().default(0),
+  cost_usd: z.number().default(0),
+  model_requests: z.number().int().default(0),
+  tool_calls: z.number().int().default(0),
+});
+export type DispatchUsage = z.infer<typeof DispatchUsageSchema>;
+
 export const DispatchSchema = z.object({
   id: z.string().uuid(),
   organizationId: z.string(),
@@ -41,6 +52,7 @@ export const DispatchSchema = z.object({
   exitCode: z.number().int().nullable(),
   durationMs: z.number().int().nullable(),
   messages: z.array(DispatchMessageSchema),
+  usage: DispatchUsageSchema.nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
