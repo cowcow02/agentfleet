@@ -48,7 +48,15 @@ Package the work into a well-described PR linked to the Linear ticket.
 
 4. **Capture PR URL** in state outputs
 
-5. **Record to conversation file:**
+5. **Update Linear ticket** — if the task is a Linear ticket (AGE-XX pattern):
+   - Move status to `In Review`
+   - Attach the PR link to the ticket using `save_issue` with a `links` entry:
+     ```
+     links: [{ url: "<pr-url>", title: "Pull Request: <pr-title>" }]
+     ```
+   - This keeps Linear in sync so the team can see progress without checking GitHub
+
+6. **Record to conversation file:**
    - Append to `.harness/conversations/<task-id>.md`:
      ```
      ## Ship
@@ -57,7 +65,16 @@ Package the work into a well-described PR linked to the Linear ticket.
      **Commits:** <count>
      ```
 
-6. **Set review phase to `waiting`** — human reviews the PR
+7. **Set review phase to `waiting`** — human reviews the PR
+
+8. **Cleanup worktree** — if `state.worktree` exists in the state file:
+   ```bash
+   REPO_ROOT=$(git worktree list --porcelain | head -1 | sed 's/worktree //')
+   WORKTREE_PATH=$(pwd)
+   cd "$REPO_ROOT"
+   git worktree remove "$WORKTREE_PATH"
+   ```
+   This frees disk space and avoids stale worktrees accumulating.
 
 ## Checklist
 
@@ -65,8 +82,10 @@ Package the work into a well-described PR linked to the Linear ticket.
 - [ ] Branch pushed to origin
 - [ ] PR created with ticket reference and summary
 - [ ] PR URL captured in state
+- [ ] Linear ticket updated (status + PR link)
 - [ ] Conversation file updated
 - [ ] Review phase set to waiting
+- [ ] Worktree cleaned up (if applicable)
 
 ## Escalation
 
