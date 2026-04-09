@@ -88,7 +88,7 @@ describe("api client", () => {
         statusText: "No Content",
         json: () => Promise.reject(new Error("no body")),
       });
-      const result = await deleteLinearConfig();
+      const result = await deleteLinearConfig("proj-1");
       expect(result).toBeUndefined();
     });
   });
@@ -182,17 +182,20 @@ describe("api client", () => {
   });
 
   describe("fetchLinearConfig", () => {
-    it("calls GET /api/integrations/linear", async () => {
+    it("calls GET /api/projects/:projectId/integrations/linear", async () => {
       const data = { configured: true, triggerStatus: "In Progress" };
       mockFetch.mockResolvedValue(jsonResponse(data));
-      const result = await fetchLinearConfig();
-      expect(mockFetch).toHaveBeenCalledWith("/api/integrations/linear", expect.any(Object));
+      const result = await fetchLinearConfig("proj-1");
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/projects/proj-1/integrations/linear",
+        expect.any(Object),
+      );
       expect(result).toEqual(data);
     });
   });
 
   describe("updateLinearConfig", () => {
-    it("calls PUT /api/integrations/linear with body", async () => {
+    it("calls PUT /api/projects/:projectId/integrations/linear with body", async () => {
       const body = {
         apiKey: "lin_api_xyz",
         triggerStatus: "In Progress",
@@ -200,9 +203,9 @@ describe("api client", () => {
       };
       const response = { configured: true, triggerStatus: "In Progress" };
       mockFetch.mockResolvedValue(jsonResponse(response));
-      const result = await updateLinearConfig(body);
+      const result = await updateLinearConfig("proj-1", body);
       const [url, opts] = mockFetch.mock.calls[0];
-      expect(url).toBe("/api/integrations/linear");
+      expect(url).toBe("/api/projects/proj-1/integrations/linear");
       expect(opts.method).toBe("PUT");
       expect(JSON.parse(opts.body)).toEqual(body);
       expect(result).toEqual(response);
@@ -210,26 +213,29 @@ describe("api client", () => {
   });
 
   describe("deleteLinearConfig", () => {
-    it("calls DELETE /api/integrations/linear", async () => {
+    it("calls DELETE /api/projects/:projectId/integrations/linear", async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 204,
         statusText: "No Content",
         json: () => Promise.reject(new Error("no body")),
       });
-      await deleteLinearConfig();
+      await deleteLinearConfig("proj-1");
       const [url, opts] = mockFetch.mock.calls[0];
-      expect(url).toBe("/api/integrations/linear");
+      expect(url).toBe("/api/projects/proj-1/integrations/linear");
       expect(opts.method).toBe("DELETE");
     });
   });
 
   describe("fetchLinearIssues", () => {
-    it("calls GET /api/integrations/linear/issues", async () => {
+    it("calls GET /api/projects/:projectId/integrations/linear/issues", async () => {
       const data = { issues: [] };
       mockFetch.mockResolvedValue(jsonResponse(data));
-      const result = await fetchLinearIssues();
-      expect(mockFetch).toHaveBeenCalledWith("/api/integrations/linear/issues", expect.any(Object));
+      const result = await fetchLinearIssues("proj-1");
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/projects/proj-1/integrations/linear/issues",
+        expect.any(Object),
+      );
       expect(result).toEqual(data);
     });
   });

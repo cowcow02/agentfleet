@@ -16,14 +16,32 @@ vi.mock("sonner", () => ({
 // Mock API
 const mockCreateDispatch = vi.fn();
 const mockFetchLinearIssues = vi.fn();
+const mockFetchProjects = vi.fn();
 vi.mock("@/lib/api", () => ({
   createDispatch: (...args: unknown[]) => mockCreateDispatch(...args),
   fetchLinearIssues: (...args: unknown[]) => mockFetchLinearIssues(...args),
+  fetchProjects: (...args: unknown[]) => mockFetchProjects(...args),
 }));
 
 beforeEach(() => {
   mockCreateDispatch.mockReset();
   mockFetchLinearIssues.mockReset();
+  mockFetchProjects.mockReset();
+  mockFetchProjects.mockResolvedValue({
+    projects: [
+      {
+        id: "proj-1",
+        organizationId: "org-1",
+        name: "My Project",
+        slug: "my-project",
+        trackerType: "linear",
+        trackerConfig: null,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z",
+      },
+    ],
+    total: 1,
+  });
   mockToastSuccess.mockReset();
   mockToastError.mockReset();
 });

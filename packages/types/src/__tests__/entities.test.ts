@@ -8,7 +8,6 @@ import {
   DispatchMessageSchema,
   DispatchSchema,
   LinearConfigSchema,
-  IntegrationSchema,
   WebhookLogEntrySchema,
   AgentSchema,
   ProjectSchema,
@@ -232,47 +231,6 @@ describe("LinearConfigSchema", () => {
 
   it("rejects missing triggerStatus", () => {
     expect(() => LinearConfigSchema.parse({ apiKey: "key", triggerLabels: [] })).toThrow();
-  });
-});
-
-// --- IntegrationSchema ---
-
-describe("IntegrationSchema", () => {
-  it("validates a valid integration", () => {
-    const result = IntegrationSchema.parse({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      organizationId: "org-1",
-      type: "linear",
-      config: { apiKey: "key" },
-      createdAt: "2024-01-01T00:00:00Z",
-      updatedAt: "2024-01-01T00:00:00Z",
-    });
-    expect(result.type).toBe("linear");
-  });
-
-  it("accepts unknown config shape", () => {
-    const result = IntegrationSchema.parse({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      organizationId: "org-1",
-      type: "linear",
-      config: null,
-      createdAt: "2024-01-01T00:00:00Z",
-      updatedAt: "2024-01-01T00:00:00Z",
-    });
-    expect(result.config).toBeNull();
-  });
-
-  it("rejects invalid integration type", () => {
-    expect(() =>
-      IntegrationSchema.parse({
-        id: "550e8400-e29b-41d4-a716-446655440000",
-        organizationId: "org-1",
-        type: "jira",
-        config: {},
-        createdAt: "2024-01-01T00:00:00Z",
-        updatedAt: "2024-01-01T00:00:00Z",
-      }),
-    ).toThrow();
   });
 });
 

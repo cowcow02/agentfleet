@@ -1,41 +1,53 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
-import { db, integrations } from "@agentfleet/db";
+import { db, projects } from "@agentfleet/db";
 import { eq, and } from "drizzle-orm";
-import { UpdateLinearConfigRequest } from "@agentfleet/types";
+import { UpdateLinearConfigRequest, type LinearConfig } from "@agentfleet/types";
 
 export const integrationsRouter = new Hono<AppEnv>();
 
-/** GET /api/integrations/linear — Get Linear config (API key masked) */
-integrationsRouter.get("/api/integrations/linear", async (c) => {
+/**
+ * Look up a project owned by the current org. Returns the row or null.
+ */
+async function getProject(projectId: string, orgId: string) {
+  const [row] = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.organizationId, orgId)))
+    .limit(1);
+  return row ?? null;
+}
+
+function webhookUrlFor(projectId: string): string {
+  const apiUrl = process.env.API_URL || `http://localhost:${process.env.PORT || 9900}`;
+  return `${apiUrl}/api/webhooks/linear/${projectId}`;
+}
+
+/** GET /api/projects/:projectId/integrations/linear — Get Linear config (API key masked) */
+integrationsRouter.get("/api/projects/:projectId/integrations/linear", async (c) => {
   const orgId = c.get("organizationId") as string;
   if (!orgId) return c.json({ error: "No active organization" }, 400);
 
-  const [row] = await db
-    .select()
-    .from(integrations)
-    .where(
-      and(eq(integrations.organizationId, orgId), eq(integrations.type, "linear"))
-    )
-    .limit(1);
+  const projectId = c.req.param("projectId");
+  const project = await getProject(projectId, orgId);
+  if (!project) return c.json({ error: "Project not found" }, 404);
 
-  if (!row) {
+  if (project.trackerType !== "linear" || !project.trackerConfig) {
     return c.json({ configured: false });
   }
 
-  const config = row.config as { apiKey: string; triggerStatus: string; triggerLabels: string[] };
-  const apiUrl = process.env.API_URL || `http://localhost:${process.env.PORT || 9900}`;
+  const config = project.trackerConfig as LinearConfig;
 
   return c.json({
     configured: true,
     triggerStatus: config.triggerStatus,
     triggerLabels: config.triggerLabels,
-    webhookUrl: `${apiUrl}/api/webhooks/linear/${orgId}`,
+    webhookUrl: webhookUrlFor(projectId),
   });
 });
 
-/** PUT /api/integrations/linear — Create or update Linear config */
-integrationsRouter.put("/api/integrations/linear", async (c) => {
+/** PUT /api/projects/:projectId/integrations/linear — Create or update Linear config */
+integrationsRouter.put("/api/projects/:projectId/integrations/linear", async (c) => {
   const orgId = c.get("organizationId") as string;
   if (!orgId) return c.json({ error: "No active organization" }, 400);
 
@@ -47,76 +59,60 @@ integrationsRouter.put("/api/integrations/linear", async (c) => {
     return c.json({ error: parsed.error.issues.map((i) => i.message).join(", ") }, 422);
   }
 
-  const config = {
+  const projectId = c.req.param("projectId");
+  const project = await getProject(projectId, orgId);
+  if (!project) return c.json({ error: "Project not found" }, 404);
+
+  const config: LinearConfig = {
     apiKey: parsed.data.apiKey,
     triggerStatus: parsed.data.triggerStatus,
     triggerLabels: parsed.data.triggerLabels,
   };
 
-  // Upsert: try update first, insert if not found
-  const [existing] = await db
-    .select()
-    .from(integrations)
-    .where(
-      and(eq(integrations.organizationId, orgId), eq(integrations.type, "linear"))
-    )
-    .limit(1);
-
-  if (existing) {
-    await db
-      .update(integrations)
-      .set({ config, updatedAt: new Date() })
-      .where(eq(integrations.id, existing.id));
-  } else {
-    await db.insert(integrations).values({
-      organizationId: orgId,
-      type: "linear",
-      config,
-    });
-  }
-
-  const apiUrl = process.env.API_URL || `http://localhost:${process.env.PORT || 9900}`;
+  await db
+    .update(projects)
+    .set({ trackerType: "linear", trackerConfig: config, updatedAt: new Date() })
+    .where(and(eq(projects.id, projectId), eq(projects.organizationId, orgId)));
 
   return c.json({
     configured: true,
     triggerStatus: config.triggerStatus,
     triggerLabels: config.triggerLabels,
-    webhookUrl: `${apiUrl}/api/webhooks/linear/${orgId}`,
+    webhookUrl: webhookUrlFor(projectId),
   });
 });
 
-/** DELETE /api/integrations/linear — Remove Linear config */
-integrationsRouter.delete("/api/integrations/linear", async (c) => {
+/** DELETE /api/projects/:projectId/integrations/linear — Remove Linear config */
+integrationsRouter.delete("/api/projects/:projectId/integrations/linear", async (c) => {
   const orgId = c.get("organizationId") as string;
   if (!orgId) return c.json({ error: "No active organization" }, 400);
 
+  const projectId = c.req.param("projectId");
+  const project = await getProject(projectId, orgId);
+  if (!project) return c.json({ error: "Project not found" }, 404);
+
   await db
-    .delete(integrations)
-    .where(
-      and(eq(integrations.organizationId, orgId), eq(integrations.type, "linear"))
-    );
+    .update(projects)
+    .set({ trackerType: null, trackerConfig: null, updatedAt: new Date() })
+    .where(and(eq(projects.id, projectId), eq(projects.organizationId, orgId)));
 
   return c.json({ configured: false });
 });
 
-/** GET /api/integrations/linear/issues — Proxy fetch from Linear GraphQL API */
-integrationsRouter.get("/api/integrations/linear/issues", async (c) => {
+/** GET /api/projects/:projectId/integrations/linear/issues — Proxy fetch from Linear GraphQL API */
+integrationsRouter.get("/api/projects/:projectId/integrations/linear/issues", async (c) => {
   const orgId = c.get("organizationId") as string;
   if (!orgId) return c.json({ error: "No active organization" }, 400);
 
-  const [row] = await db
-    .select()
-    .from(integrations)
-    .where(
-      and(eq(integrations.organizationId, orgId), eq(integrations.type, "linear"))
-    )
-    .limit(1);
+  const projectId = c.req.param("projectId");
+  const project = await getProject(projectId, orgId);
+  if (!project) return c.json({ error: "Project not found" }, 404);
 
-  if (!row) {
+  if (project.trackerType !== "linear" || !project.trackerConfig) {
     return c.json({ error: "Linear integration not configured" }, 404);
   }
 
-  const config = row.config as { apiKey: string };
+  const config = project.trackerConfig as LinearConfig;
 
   try {
     const response = await fetch("https://api.linear.app/graphql", {

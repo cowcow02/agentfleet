@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { organization, apiKey, useSession } from "@/lib/auth-client";
 import { LinearConfig } from "@/components/linear-config";
+import { fetchProjects } from "@/lib/api";
+import type { Project } from "@agentfleet/types";
 import { Copy, Trash2, UserPlus, Plus } from "lucide-react";
 
 interface Member {
@@ -32,11 +34,27 @@ export default function SettingsPage() {
   const [creatingKey, setCreatingKey] = useState(false);
   const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
 
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
   useEffect(() => {
     loadMembers();
     loadApiKeys();
     loadOrgName();
+    loadProjects();
   }, []);
+
+  async function loadProjects() {
+    try {
+      const result = await fetchProjects();
+      setProjects(result.projects);
+      if (result.projects.length > 0) {
+        setSelectedProjectId((prev) => prev ?? result.projects[0].id);
+      }
+    } catch {
+      // Ignore
+    }
+  }
 
   async function loadOrgName() {
     try {
@@ -450,8 +468,41 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Linear Integration */}
-      <LinearConfig />
+      {/* Linear Integration — per project */}
+      {projects.length === 0 ? (
+        <div className="af-section" style={{ marginBottom: 24 }}>
+          <div className="af-section-header">Linear Integration</div>
+          <div className="af-section-body">
+            <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>
+              Create a project first to configure Linear integration.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="af-section" style={{ marginBottom: 12 }}>
+            <div className="af-section-header">Project</div>
+            <div className="af-section-body">
+              <div className="flex flex-col" style={{ gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                  Configure tracker for
+                </label>
+                <select
+                  value={selectedProjectId ?? ""}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                >
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+          {selectedProjectId && <LinearConfig projectId={selectedProjectId} />}
+        </>
+      )}
     </div>
   );
 }

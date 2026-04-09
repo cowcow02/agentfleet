@@ -29,6 +29,13 @@
       "when": 1775716491711,
       "tag": "0003_optimal_machine_man",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775722701207,
+      "tag": "0004_rainy_mandroid",
+      "breakpoints": true
     }
   ]
 }

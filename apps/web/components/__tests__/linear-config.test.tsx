@@ -34,13 +34,13 @@ beforeEach(() => {
 describe("LinearConfig", () => {
   it("shows loading state initially", () => {
     mockFetchLinearConfig.mockReturnValue(new Promise(() => {})); // never resolves
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
     expect(screen.getByText("Loading Linear config...")).toBeInTheDocument();
   });
 
   it("shows unconfigured state", async () => {
     mockFetchLinearConfig.mockResolvedValue({ configured: false });
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByText("Linear Integration")).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("LinearConfig", () => {
       triggerLabels: ["agent", "auto"],
       webhookUrl: "https://example.com/webhook",
     });
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByText("Connected")).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("LinearConfig", () => {
       triggerStatus: "In Progress",
       triggerLabels: ["agent", "auto"],
     });
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByText("Connected")).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe("LinearConfig", () => {
       triggerLabels: [],
       webhookUrl: "https://fleet.example.com/api/webhooks/linear",
     });
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByText("https://fleet.example.com/api/webhooks/linear")).toBeInTheDocument();
@@ -101,7 +101,7 @@ describe("LinearConfig", () => {
 
   it("renders form fields", async () => {
     mockFetchLinearConfig.mockResolvedValue({ configured: false });
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByText(/API Key/)).toBeInTheDocument();
@@ -120,7 +120,7 @@ describe("LinearConfig", () => {
     });
 
     const user = userEvent.setup();
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByText(/API Key/)).toBeInTheDocument();
@@ -134,7 +134,7 @@ describe("LinearConfig", () => {
     await user.click(screen.getByRole("button", { name: "Save Configuration" }));
 
     await waitFor(() => {
-      expect(mockUpdateLinearConfig).toHaveBeenCalledWith({
+      expect(mockUpdateLinearConfig).toHaveBeenCalledWith("proj-1", {
         apiKey: "lin_api_test123",
         triggerStatus: "in_progress",
         triggerLabels: ["agent", "auto"],
@@ -152,7 +152,7 @@ describe("LinearConfig", () => {
     mockUpdateLinearConfig.mockRejectedValue(new Error("Bad API key"));
 
     const user = userEvent.setup();
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByText(/API Key/)).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe("LinearConfig", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
     const user = userEvent.setup();
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
@@ -206,7 +206,7 @@ describe("LinearConfig", () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
 
     const user = userEvent.setup();
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
@@ -230,7 +230,7 @@ describe("LinearConfig", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
     const user = userEvent.setup();
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
@@ -256,7 +256,7 @@ describe("LinearConfig", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
     const user = userEvent.setup();
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
@@ -275,7 +275,7 @@ describe("LinearConfig", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockFetchLinearConfig.mockRejectedValue(new Error("Network error"));
 
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     // Should transition from loading to rendered state
     await waitFor(() => {
@@ -291,7 +291,7 @@ describe("LinearConfig", () => {
     mockUpdateLinearConfig.mockRejectedValue("unknown");
 
     const user = userEvent.setup();
-    render(<LinearConfig />);
+    render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByText(/API Key/)).toBeInTheDocument();
@@ -326,7 +326,7 @@ describe("LinearConfig", () => {
     });
 
     const user = userEvent.setup();
-    const { container } = render(<LinearConfig />);
+    const { container } = render(<LinearConfig projectId="proj-1" />);
 
     await waitFor(() => {
       expect(screen.getByText("https://fleet.example.com/api/webhooks/linear")).toBeInTheDocument();
