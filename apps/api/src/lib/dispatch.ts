@@ -12,7 +12,7 @@ export async function createDispatch(
   orgId: string,
   request: CreateDispatchRequest,
   source: "manual" | "linear",
-  userId?: string | null
+  userId?: string | null,
 ) {
   // Find matching agent
   const match = findAgentForDispatch(orgId, request.labels);
@@ -83,7 +83,7 @@ export async function createDispatch(
 export async function appendDispatchMessage(
   dispatchId: string,
   message: string,
-  timestamp: string
+  timestamp: string,
 ) {
   const [existing] = await db
     .select()
@@ -118,7 +118,7 @@ export async function completeDispatch(
   dispatchId: string,
   success: boolean,
   exitCode: number,
-  durationSeconds: number
+  durationSeconds: number,
 ) {
   const durationMs = Math.round(durationSeconds * 1000);
   const status = success ? "completed" : "failed";
@@ -166,6 +166,7 @@ export function serializeDispatch(row: typeof dispatches.$inferSelect): Record<s
     exitCode: row.exitCode,
     durationMs: row.durationMs,
     messages: row.messages ?? [],
+    usage: row.usage ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
