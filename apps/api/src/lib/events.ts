@@ -25,7 +25,7 @@ export interface FeedEventPayload {
   type: string;
 }
 
-export interface TelemetryEventPayload {
+export interface TranscriptEventPayload {
   orgId: string;
   dispatchId: string;
   sessionId: string;
@@ -47,8 +47,8 @@ class EventBus extends EventEmitter {
     this.emit("feed:event", payload);
   }
 
-  emitTelemetryEvent(payload: TelemetryEventPayload) {
-    this.emit("telemetry:event", payload);
+  emitTranscriptEvent(payload: TranscriptEventPayload) {
+    this.emit("transcript:event", payload);
   }
 }
 

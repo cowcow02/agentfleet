@@ -1,4 +1,4 @@
-import { db, dispatches, telemetryEvents } from "@agentfleet/db";
+import { db, dispatches, transcriptEvents } from "@agentfleet/db";
 import { eq, and } from "drizzle-orm";
 import { findAgentForDispatch } from "./machines";
 import { eventBus } from "./events";
@@ -148,7 +148,7 @@ export async function completeDispatch(
   }
 }
 
-export type TelemetryEventType =
+export type TranscriptEventType =
   | "user"
   | "assistant"
   | "attachment"
@@ -156,16 +156,16 @@ export type TelemetryEventType =
   | "tool_result"
   | "usage";
 
-/** Store a telemetry event from daemon JSONL tailing */
-export async function appendTelemetryEvent(
+/** Store a transcript event from daemon JSONL tailing */
+export async function appendTranscriptEvent(
   dispatchId: string,
   orgId: string,
   sessionId: string,
-  eventType: TelemetryEventType,
+  eventType: TranscriptEventType,
   data: Record<string, unknown>,
   timestamp: string,
 ) {
-  await db.insert(telemetryEvents).values({
+  await db.insert(transcriptEvents).values({
     dispatchId,
     organizationId: orgId,
     sessionId,
@@ -174,7 +174,7 @@ export async function appendTelemetryEvent(
     timestamp: new Date(timestamp),
   });
 
-  eventBus.emitTelemetryEvent({
+  eventBus.emitTranscriptEvent({
     orgId,
     dispatchId,
     sessionId,

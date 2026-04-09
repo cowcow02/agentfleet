@@ -69,10 +69,10 @@ export const dispatches = pgTable(
   ],
 );
 
-// --- telemetry_events ---
+// --- transcript_events (parsed entries from JSONL session transcripts) ---
 
-export const telemetryEvents = pgTable(
-  "telemetry_events",
+export const transcriptEvents = pgTable(
+  "transcript_events",
   {
     id: serial("id").primaryKey(),
     dispatchId: uuid("dispatch_id")
@@ -88,8 +88,8 @@ export const telemetryEvents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    index("idx_telemetry_dispatch").on(table.dispatchId),
-    index("idx_telemetry_org_dispatch").on(table.organizationId, table.dispatchId),
+    index("idx_transcript_dispatch").on(table.dispatchId),
+    index("idx_transcript_org_dispatch").on(table.organizationId, table.dispatchId),
   ],
 );
 

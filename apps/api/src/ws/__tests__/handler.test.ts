@@ -22,7 +22,7 @@ vi.mock("../../lib/machines", () => ({
 // Mock dispatch
 vi.mock("../../lib/dispatch", () => ({
   appendDispatchMessage: vi.fn(),
-  appendTelemetryEvent: vi.fn(),
+  appendTranscriptEvent: vi.fn(),
   completeDispatch: vi.fn(),
 }));
 
@@ -32,7 +32,7 @@ vi.mock("../../lib/events", () => ({
     emitAgentUpdate: vi.fn(),
     emitDispatchUpdate: vi.fn(),
     emitFeedEvent: vi.fn(),
-    emitTelemetryEvent: vi.fn(),
+    emitTranscriptEvent: vi.fn(),
   },
 }));
 
@@ -44,7 +44,7 @@ import {
   updateHeartbeat,
   getMachineByWs,
 } from "../../lib/machines";
-import { appendDispatchMessage, appendTelemetryEvent, completeDispatch } from "../../lib/dispatch";
+import { appendDispatchMessage, appendTranscriptEvent, completeDispatch } from "../../lib/dispatch";
 import { eventBus } from "../../lib/events";
 
 // Helper to create mock WebSocket with event handlers
@@ -316,7 +316,7 @@ describe("WebSocket handler", () => {
       );
 
       await vi.waitFor(() => {
-        expect(appendTelemetryEvent).toHaveBeenCalledWith(
+        expect(appendTranscriptEvent).toHaveBeenCalledWith(
           "d-1",
           "org-1",
           "sess-abc",

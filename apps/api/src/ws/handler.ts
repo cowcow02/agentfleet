@@ -5,7 +5,7 @@ import { DaemonMessage } from "@agentfleet/types";
 import { auth } from "../auth";
 import { resolveApiKey } from "../lib/api-key-auth";
 import { registerMachine, removeMachine, updateHeartbeat, getMachineByWs } from "../lib/machines";
-import { appendDispatchMessage, appendTelemetryEvent, completeDispatch } from "../lib/dispatch";
+import { appendDispatchMessage, appendTranscriptEvent, completeDispatch } from "../lib/dispatch";
 import { eventBus } from "../lib/events";
 import { getAgentsForOrg, getMachineCountForOrg } from "../lib/machines";
 
@@ -119,7 +119,9 @@ function handleConnection(ws: WebSocket, orgId: string) {
       }
 
       case "telemetry": {
-        await appendTelemetryEvent(
+        // WS message type stays "telemetry" — no collision with AGE-10 (which uses HTTP)
+        // Internally routes to the transcript_events table
+        await appendTranscriptEvent(
           msg.dispatch_id,
           orgId,
           msg.session_id,

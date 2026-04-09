@@ -70,9 +70,9 @@ describe("EventBus", () => {
     eventBus.off("agent:update", l2);
   });
 
-  it("emitTelemetryEvent fires telemetry:event with payload", () => {
+  it("emitTranscriptEvent fires transcript:event with payload", () => {
     const listener = vi.fn();
-    eventBus.on("telemetry:event", listener);
+    eventBus.on("transcript:event", listener);
 
     const payload = {
       orgId: "org1",
@@ -82,12 +82,12 @@ describe("EventBus", () => {
       data: { name: "Read", input: { file_path: "/foo" } },
       timestamp: "2024-01-01T00:00:00Z",
     };
-    eventBus.emitTelemetryEvent(payload);
+    eventBus.emitTranscriptEvent(payload);
 
     expect(listener).toHaveBeenCalledOnce();
     expect(listener).toHaveBeenCalledWith(payload);
 
-    eventBus.off("telemetry:event", listener);
+    eventBus.off("transcript:event", listener);
   });
 
   it("listener removal stops receiving events", () => {

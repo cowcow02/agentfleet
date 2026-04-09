@@ -6,7 +6,7 @@ import type {
   AgentUpdatePayload,
   DispatchUpdatePayload,
   FeedEventPayload,
-  TelemetryEventPayload,
+  TranscriptEventPayload,
 } from "../lib/events";
 
 export const sseRouter = new Hono<AppEnv>();
@@ -59,11 +59,11 @@ sseRouter.get("/api/sse", (c) => {
         });
     };
 
-    const onTelemetryEvent = (payload: TelemetryEventPayload) => {
+    const onTranscriptEvent = (payload: TranscriptEventPayload) => {
       if (payload.orgId !== orgId || closed) return;
       stream
         .writeSSE({
-          event: "telemetry:event",
+          event: "transcript:event",
           data: JSON.stringify({
             dispatchId: payload.dispatchId,
             sessionId: payload.sessionId,
@@ -80,7 +80,7 @@ sseRouter.get("/api/sse", (c) => {
     eventBus.on("agent:update", onAgentUpdate);
     eventBus.on("dispatch:update", onDispatchUpdate);
     eventBus.on("feed:event", onFeedEvent);
-    eventBus.on("telemetry:event", onTelemetryEvent);
+    eventBus.on("transcript:event", onTranscriptEvent);
 
     // Send heartbeat comment every 30s to keep connection alive
     const heartbeatInterval = setInterval(() => {
@@ -100,7 +100,7 @@ sseRouter.get("/api/sse", (c) => {
       eventBus.off("agent:update", onAgentUpdate);
       eventBus.off("dispatch:update", onDispatchUpdate);
       eventBus.off("feed:event", onFeedEvent);
-      eventBus.off("telemetry:event", onTelemetryEvent);
+      eventBus.off("transcript:event", onTranscriptEvent);
     });
 
     // Keep the stream open by waiting indefinitely
