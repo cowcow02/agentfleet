@@ -200,6 +200,20 @@
   **UI checks:** skipped live UI exercise — API routes under `/api/projects/:projectId/integrations/linear*` require authenticated session (better-auth cookie). The 47 web unit tests already cover the form's call signatures, the project selector state, and the settings page rendering.
   **Build:** pass — `pnpm --filter @agentfleet/api build` and `pnpm --filter web build` both succeed (Next.js 16 static pages generated, api tsc clean).
 
+## Ship
+
+**Branch:** `age-9-project-level-tracker-config`
+**PR:** https://github.com/cowcow02/agentfleet/pull/5
+**Commits:** 1 (feature commit) + 1 follow-up (this conversation log update)
+**Linear:** moved to `In Review`, PR attached
+**CI:** all green
+
+- `types-tests` — pass (30s)
+- `api-tests` — pass (40s)
+- `web-tests` — pass (37s)
+- Railway `agentfleet-api` — pass (`agentfleet-api-agentfleet-pr-5.up.railway.app`)
+- Railway `agentfleet-web` — pass (`agentfleet-web-agentfleet-pr-5.up.railway.app`)
+
 ## Harness Issues
 
 ### [verify] Host has native Postgres on 5432 that shadows docker compose
