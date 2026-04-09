@@ -8,6 +8,7 @@
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "push": "drizzle-kit push",
+    "db:reset": "psql -d postgres -c 'DROP DATABASE IF EXISTS agentfleet_e2e;' && psql -d postgres -c 'CREATE DATABASE agentfleet_e2e;' && drizzle-kit migrate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
