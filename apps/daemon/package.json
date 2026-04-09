@@ -4,7 +4,8 @@
   "description": "AgentFleet Daemon - agent registration and execution",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test lib/__tests__/*.test.js"
   },
   "dependencies": {
     "ws": "^8.16.0",
