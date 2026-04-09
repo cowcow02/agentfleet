@@ -5,7 +5,7 @@ import { DaemonMessage } from "@agentfleet/types";
 import { auth } from "../auth";
 import { resolveApiKey } from "../lib/api-key-auth";
 import { registerMachine, removeMachine, updateHeartbeat, getMachineByWs } from "../lib/machines";
-import { appendDispatchMessage, completeDispatch } from "../lib/dispatch";
+import { appendDispatchMessage, appendTelemetryEvent, completeDispatch } from "../lib/dispatch";
 import { eventBus } from "../lib/events";
 import { getAgentsForOrg, getMachineCountForOrg } from "../lib/machines";
 
@@ -114,6 +114,19 @@ function handleConnection(ws: WebSocket, orgId: string) {
 
       case "status": {
         await appendDispatchMessage(msg.dispatch_id, msg.message, msg.timestamp);
+        ws.send(JSON.stringify({ type: "ack", dispatch_id: msg.dispatch_id }));
+        break;
+      }
+
+      case "telemetry": {
+        await appendTelemetryEvent(
+          msg.dispatch_id,
+          orgId,
+          msg.session_id,
+          msg.event_type,
+          msg.data,
+          msg.timestamp,
+        );
         ws.send(JSON.stringify({ type: "ack", dispatch_id: msg.dispatch_id }));
         break;
       }

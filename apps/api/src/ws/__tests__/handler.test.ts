@@ -22,6 +22,7 @@ vi.mock("../../lib/machines", () => ({
 // Mock dispatch
 vi.mock("../../lib/dispatch", () => ({
   appendDispatchMessage: vi.fn(),
+  appendTelemetryEvent: vi.fn(),
   completeDispatch: vi.fn(),
 }));
 
@@ -31,6 +32,7 @@ vi.mock("../../lib/events", () => ({
     emitAgentUpdate: vi.fn(),
     emitDispatchUpdate: vi.fn(),
     emitFeedEvent: vi.fn(),
+    emitTelemetryEvent: vi.fn(),
   },
 }));
 
@@ -42,7 +44,7 @@ import {
   updateHeartbeat,
   getMachineByWs,
 } from "../../lib/machines";
-import { appendDispatchMessage, completeDispatch } from "../../lib/dispatch";
+import { appendDispatchMessage, appendTelemetryEvent, completeDispatch } from "../../lib/dispatch";
 import { eventBus } from "../../lib/events";
 
 // Helper to create mock WebSocket with event handlers
@@ -291,6 +293,35 @@ describe("WebSocket handler", () => {
         expect(appendDispatchMessage).toHaveBeenCalledWith(
           "d-1",
           "Running step 1",
+          "2024-01-01T00:00:00Z",
+        );
+      });
+
+      expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ type: "ack", dispatch_id: "d-1" }));
+    });
+
+    it("handles telemetry message", async () => {
+      const { ws, emit } = await connectWs();
+
+      emit(
+        "message",
+        JSON.stringify({
+          type: "telemetry",
+          dispatch_id: "d-1",
+          session_id: "sess-abc",
+          event_type: "tool_call",
+          data: { name: "Read", input: { file_path: "/foo" } },
+          timestamp: "2024-01-01T00:00:00Z",
+        }),
+      );
+
+      await vi.waitFor(() => {
+        expect(appendTelemetryEvent).toHaveBeenCalledWith(
+          "d-1",
+          "org-1",
+          "sess-abc",
+          "tool_call",
+          { name: "Read", input: { file_path: "/foo" } },
           "2024-01-01T00:00:00Z",
         );
       });

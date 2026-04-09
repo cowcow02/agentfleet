@@ -2,18 +2,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock DB
 const mockInsert = vi.fn();
+const mockTelemetryInsert = vi.fn();
 const mockUpdate = vi.fn();
 const mockSelect = vi.fn();
 
 vi.mock("@agentfleet/db", () => {
   const dispatches = { id: "dispatches", organizationId: "org_id", status: "status" };
+  const telemetryEvents = { id: "telemetry_events" };
   return {
     db: {
-      insert: () => ({ values: (v: any) => ({ returning: () => mockInsert(v) }) }),
+      insert: (table: any) => {
+        if (table === telemetryEvents) {
+          return { values: (v: any) => mockTelemetryInsert(v) };
+        }
+        return { values: (v: any) => ({ returning: () => mockInsert(v) }) };
+      },
       update: () => ({ set: (v: any) => ({ where: (w: any) => mockUpdate(v, w) }) }),
       select: () => ({ from: () => ({ where: (w: any) => ({ limit: () => mockSelect(w) }) }) }),
     },
     dispatches,
+    telemetryEvents,
     eq: vi.fn((a: any, b: any) => ({ _eq: [a, b] })),
     and: vi.fn((...args: any[]) => ({ _and: args })),
   };
@@ -30,6 +38,7 @@ vi.mock("../events", () => ({
     emitDispatchUpdate: vi.fn(),
     emitFeedEvent: vi.fn(),
     emitAgentUpdate: vi.fn(),
+    emitTelemetryEvent: vi.fn(),
   },
 }));
 
@@ -37,6 +46,7 @@ import {
   createDispatch,
   completeDispatch,
   appendDispatchMessage,
+  appendTelemetryEvent,
   serializeDispatch,
 } from "../dispatch";
 import { findAgentForDispatch } from "../machines";
@@ -269,6 +279,59 @@ describe("dispatch", () => {
 
       expect(mockUpdate).toHaveBeenCalled();
       expect(eventBus.emitDispatchUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("appendTelemetryEvent", () => {
+    it("inserts telemetry event into DB and emits SSE event", async () => {
+      mockTelemetryInsert.mockResolvedValue(undefined);
+
+      await appendTelemetryEvent(
+        "d-123",
+        "org1",
+        "sess-abc",
+        "tool_call",
+        { name: "Read", input: { file_path: "/foo" } },
+        "2024-06-01T12:00:00Z",
+      );
+
+      expect(mockTelemetryInsert).toHaveBeenCalledWith({
+        dispatchId: "d-123",
+        organizationId: "org1",
+        sessionId: "sess-abc",
+        eventType: "tool_call",
+        data: { name: "Read", input: { file_path: "/foo" } },
+        timestamp: new Date("2024-06-01T12:00:00Z"),
+      });
+
+      expect(eventBus.emitTelemetryEvent).toHaveBeenCalledWith({
+        orgId: "org1",
+        dispatchId: "d-123",
+        sessionId: "sess-abc",
+        eventType: "tool_call",
+        data: { name: "Read", input: { file_path: "/foo" } },
+        timestamp: "2024-06-01T12:00:00Z",
+      });
+    });
+
+    it("passes through different event types", async () => {
+      mockTelemetryInsert.mockResolvedValue(undefined);
+
+      await appendTelemetryEvent(
+        "d-456",
+        "org2",
+        "sess-xyz",
+        "usage",
+        { input_tokens: 100, output_tokens: 50 },
+        "2024-06-01T13:00:00Z",
+      );
+
+      expect(mockTelemetryInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "usage",
+          data: { input_tokens: 100, output_tokens: 50 },
+        }),
+      );
     });
   });
 

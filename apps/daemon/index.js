@@ -1,9 +1,12 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const crypto = require("crypto");
 const { spawn } = require("child_process");
 const WebSocket = require("ws");
 const yaml = require("js-yaml");
+const { JsonlTailer } = require("./lib/jsonl-tailer");
+const { parseTelemetryEvents } = require("./lib/telemetry-parser");
 
 // --- Load manifest ---
 // Resolution order: MANIFEST env var -> ./agents.yaml -> ~/.agentfleet/agents.yaml
@@ -180,6 +183,14 @@ function handleDispatch(msg) {
   cmd = cmd.replace(/\{ticket_title\}/g, ticket.title || "");
   cmd = cmd.replace(/\{ticket_description\}/g, ticket.description || "");
 
+  // Generate session ID for JSONL transcript tailing
+  const sessionId = crypto.randomUUID();
+
+  // Inject --session-id into Claude Code commands
+  if (cmd.includes("claude") && !cmd.includes("--session-id")) {
+    cmd = cmd.replace(/(claude\s)/, `$1--session-id ${sessionId} `);
+  }
+
   // Spawn the process
   const workdir = agentDef.invoke.workdir || process.cwd();
   const launcher = agentDef.invoke.launcher || "headless";
@@ -210,7 +221,8 @@ function handleDispatch(msg) {
       .replace(/\{workdir\}/g, workdir)
       .replace(/\{ticket_id\}/g, ticket.id || "")
       .replace(/\{agent_name\}/g, agentName)
-      .replace(/\{dispatch_id\}/g, dispatch_id);
+      .replace(/\{dispatch_id\}/g, dispatch_id)
+      .replace(/\{session_id\}/g, sessionId);
   };
 
   if (typeof launcher === "string" && launcher !== "headless") {
@@ -234,10 +246,15 @@ function handleDispatch(msg) {
     startedAt: Date.now(),
     state: "active",
     idleSince: null,
+    sessionId,
+    tailer: null,
   });
 
   // Send started status
   sendStatus(dispatch_id, "started");
+
+  // Start JSONL transcript tailing
+  startTranscriptTailing(dispatch_id, sessionId, workdir);
 
   if (isHeadless) {
     // --- Headless mode: piped stdout, no human interaction ---
@@ -290,6 +307,11 @@ function handleDispatch(msg) {
     const duration = job ? Math.round((Date.now() - job.startedAt) / 1000) : 0;
     const success = code === 0;
 
+    // Stop JSONL tailing
+    if (job && job.tailer) {
+      job.tailer.stop();
+    }
+
     log(`${agentName} finished (exit ${code}, ${formatDuration(duration)}) for ${ticket.id}`);
     runningJobs.delete(dispatch_id);
 
@@ -309,6 +331,11 @@ function handleDispatch(msg) {
   child.on("error", (err) => {
     const job = runningJobs.get(dispatch_id);
     const duration = job ? Math.round((Date.now() - job.startedAt) / 1000) : 0;
+
+    // Stop JSONL tailing
+    if (job && job.tailer) {
+      job.tailer.stop();
+    }
 
     log(`${agentName} spawn error after ${formatDuration(duration)}: ${err.message}`);
     runningJobs.delete(dispatch_id);
@@ -388,6 +415,101 @@ function summarizeStreamEvent(event, agentName) {
     default:
       return null; // skip stream_event, rate_limit_event etc
   }
+}
+
+// --- JSONL transcript tailing ---
+
+/**
+ * Compute the Claude Code transcript path for a given project workdir and session ID.
+ * Claude Code stores transcripts at: ~/.claude/projects/<project-hash>/<session-id>.jsonl
+ * The project hash is a deterministic hash of the absolute project path.
+ */
+function computeTranscriptPath(workdir, sessionId) {
+  const absPath = path.resolve(workdir);
+  // Claude Code uses the absolute path with slashes replaced by dashes, truncated
+  // Actually, Claude Code uses a specific hashing scheme. For now, we'll use a glob approach.
+  // The session ID is unique enough to find the file.
+  const claudeDir = path.join(os.homedir(), ".claude", "projects");
+  return { claudeDir, sessionId };
+}
+
+function findTranscriptFile(claudeDir, sessionId) {
+  // Search all project hash directories for our session ID
+  try {
+    const dirs = fs.readdirSync(claudeDir);
+    for (const dir of dirs) {
+      const filePath = path.join(claudeDir, dir, `${sessionId}.jsonl`);
+      if (fs.existsSync(filePath)) return filePath;
+    }
+  } catch {
+    // Directory doesn't exist yet
+  }
+  return null;
+}
+
+function startTranscriptTailing(dispatchId, sessionId, workdir) {
+  const { claudeDir } = computeTranscriptPath(workdir, sessionId);
+
+  // Try to find the file immediately, or watch for it
+  const tryStart = () => {
+    const filePath = findTranscriptFile(claudeDir, sessionId);
+    if (filePath) {
+      startTailer(dispatchId, sessionId, filePath);
+      return true;
+    }
+    return false;
+  };
+
+  if (tryStart()) return;
+
+  // Watch for the file to appear (Claude Code creates it on first API call)
+  let attempts = 0;
+  const maxAttempts = 60; // ~60 seconds
+  const interval = setInterval(() => {
+    attempts++;
+    if (tryStart() || attempts >= maxAttempts) {
+      clearInterval(interval);
+      if (attempts >= maxAttempts) {
+        log(`[telemetry] Transcript file not found for session ${sessionId} after ${maxAttempts}s`);
+      }
+    }
+    // Also check if the job is still running
+    if (!runningJobs.has(dispatchId)) {
+      clearInterval(interval);
+    }
+  }, 1000);
+}
+
+function startTailer(dispatchId, sessionId, filePath) {
+  const job = runningJobs.get(dispatchId);
+  if (!job) return;
+
+  log(`[telemetry] Tailing transcript: ${filePath}`);
+  const tailer = new JsonlTailer(filePath);
+  job.tailer = tailer;
+
+  tailer.on("event", (entry) => {
+    const events = parseTelemetryEvents(entry);
+    for (const event of events) {
+      sendTelemetry(dispatchId, sessionId, event.event_type, event.data);
+    }
+  });
+
+  tailer.start();
+}
+
+function sendTelemetry(dispatchId, sessionId, eventType, data) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(
+    JSON.stringify({
+      type: "telemetry",
+      dispatch_id: dispatchId,
+      session_id: sessionId,
+      event_type: eventType,
+      data,
+      timestamp: new Date().toISOString(),
+    }),
+  );
 }
 
 function sendStatus(dispatchId, message) {

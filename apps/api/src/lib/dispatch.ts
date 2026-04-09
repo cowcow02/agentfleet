@@ -1,4 +1,4 @@
-import { db, dispatches } from "@agentfleet/db";
+import { db, dispatches, telemetryEvents } from "@agentfleet/db";
 import { eq, and } from "drizzle-orm";
 import { findAgentForDispatch } from "./machines";
 import { eventBus } from "./events";
@@ -12,7 +12,7 @@ export async function createDispatch(
   orgId: string,
   request: CreateDispatchRequest,
   source: "manual" | "linear",
-  userId?: string | null
+  userId?: string | null,
 ) {
   // Find matching agent
   const match = findAgentForDispatch(orgId, request.labels);
@@ -83,7 +83,7 @@ export async function createDispatch(
 export async function appendDispatchMessage(
   dispatchId: string,
   message: string,
-  timestamp: string
+  timestamp: string,
 ) {
   const [existing] = await db
     .select()
@@ -118,7 +118,7 @@ export async function completeDispatch(
   dispatchId: string,
   success: boolean,
   exitCode: number,
-  durationSeconds: number
+  durationSeconds: number,
 ) {
   const durationMs = Math.round(durationSeconds * 1000);
   const status = success ? "completed" : "failed";
@@ -146,6 +146,42 @@ export async function completeDispatch(
       type: status,
     });
   }
+}
+
+export type TelemetryEventType =
+  | "user"
+  | "assistant"
+  | "attachment"
+  | "tool_call"
+  | "tool_result"
+  | "usage";
+
+/** Store a telemetry event from daemon JSONL tailing */
+export async function appendTelemetryEvent(
+  dispatchId: string,
+  orgId: string,
+  sessionId: string,
+  eventType: TelemetryEventType,
+  data: Record<string, unknown>,
+  timestamp: string,
+) {
+  await db.insert(telemetryEvents).values({
+    dispatchId,
+    organizationId: orgId,
+    sessionId,
+    eventType,
+    data,
+    timestamp: new Date(timestamp),
+  });
+
+  eventBus.emitTelemetryEvent({
+    orgId,
+    dispatchId,
+    sessionId,
+    eventType,
+    data,
+    timestamp,
+  });
 }
 
 /** Serialize a dispatch DB row to a plain object for JSON/SSE */

@@ -69,6 +69,30 @@ export const dispatches = pgTable(
   ],
 );
 
+// --- telemetry_events ---
+
+export const telemetryEvents = pgTable(
+  "telemetry_events",
+  {
+    id: serial("id").primaryKey(),
+    dispatchId: uuid("dispatch_id")
+      .notNull()
+      .references(() => dispatches.id),
+    organizationId: text("organization_id").notNull(),
+    sessionId: text("session_id").notNull(),
+    eventType: text("event_type", {
+      enum: ["user", "assistant", "attachment", "tool_call", "tool_result", "usage"],
+    }).notNull(),
+    data: jsonb("data").notNull(),
+    timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_telemetry_dispatch").on(table.dispatchId),
+    index("idx_telemetry_org_dispatch").on(table.organizationId, table.dispatchId),
+  ],
+);
+
 // --- integrations ---
 
 export const integrations = pgTable(
