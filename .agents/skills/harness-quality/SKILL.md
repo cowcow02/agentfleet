@@ -50,7 +50,9 @@ Ensure the codebase passes all static and dynamic quality checks before verifica
      **Tests:** X passed, Y failed
      **Lint:** pass/fail
      **Format:** pass/fail
+     **Pre-existing issues noted:** <list any errors in files you didn't touch>
      ```
+   - **If you hit friction** (broken pre-existing checks blocking you, flaky tests, slow checks), append an entry to the `## Harness Issues` section at the bottom of the file.
 
 ## Checklist
 

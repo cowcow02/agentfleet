@@ -44,6 +44,7 @@ Produce a concrete plan that covers all acceptance criteria with a TDD approach.
      **Test strategy:** <TDD approach>
      **Files to change:** <count>
      ```
+   - **If you hit friction** while planning (had to revise the plan, ambiguous requirements, blocked on unknowns), append an entry to the `## Harness Issues` section at the bottom of the file.
 
 6. **If profile is `full`:** set phase status to `waiting` — human reviews the plan before implementation starts. Present the plan clearly and ask for approval.
 

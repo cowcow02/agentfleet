@@ -40,6 +40,7 @@ Implement the change using TDD: write failing tests, then write code to make the
      **Files changed:** <list>
      **Key decisions:** <any deviations from plan>
      ```
+   - **If you hit friction** while implementing (failed test approach, unclear pattern, retried more than once, plan revision), append an entry to the `## Harness Issues` section at the bottom of the file.
 
 ## Checklist
 

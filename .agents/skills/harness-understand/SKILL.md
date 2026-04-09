@@ -48,6 +48,7 @@ Build a clear picture of the current state — what files exist, what patterns a
      **Files:** <list>
      **Key patterns:** <what to follow>
      ```
+   - **If you hit friction** during exploration (couldn't find expected patterns, scope unclear, repeated retries), append an entry to the `## Harness Issues` section at the bottom of the file using the documented format (phase, what happened, root cause, workaround, suggested fix, turns wasted).
 
 ## Checklist
 

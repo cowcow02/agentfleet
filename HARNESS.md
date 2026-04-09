@@ -27,7 +27,7 @@ Every ticket follows a disciplined, phased workflow. Each phase is a focused ski
 
 ### 1. Pickup
 
-Fetch the Linear ticket via MCP or parse a plain text description. Load title, description, acceptance criteria, labels, priority into the state file.
+Fetch the Linear ticket via MCP or parse a plain text description. Load title, description, acceptance criteria, labels, priority into the state file. Move the Linear ticket to **In Progress** so the team sees work has started. Initialize the conversation file with a `## Harness Issues` section.
 
 ### 2. Understand
 
@@ -59,24 +59,37 @@ Run all static and dynamic quality checks. Fix issues before proceeding.
 
 ### 6. Verify
 
-Start the app and prove the deliverable works. Use Claude in Chrome for UI verification, HTTP calls for API verification. Capture evidence (screenshots, API responses).
+Start the app on a **per-task isolated environment** and prove the deliverable works. Use Claude in Chrome for UI verification, HTTP calls for API verification. Capture evidence (screenshots, API responses).
 
-**Key commands:**
+**Per-task isolation scheme** (parallel-safe):
 
-- `docker compose up -d` — start Postgres
-- `pnpm --filter @agentfleet/db drizzle-kit migrate` — run migrations
-- `pnpm --filter @agentfleet/api dev` — API on port 9900
-- `pnpm --filter web dev` — Web on port 3000
+- Slot = last 2 digits of task ID, zero-padded (`AGE-6` → `06`, `AGE-23` → `23`)
+- API port: `99XX` (e.g. `9906`)
+- Web port: `30XX` (e.g. `3006`)
+- Postgres DB: `agentfleet_age_XX` inside the shared Postgres container
+- Per-task DB is created on verify start, dropped on verify end
+
+**Key commands** (substitute `XX` with the slot):
+
+- `docker compose up -d` — start shared Postgres (idempotent)
+- `docker compose exec -T postgres psql -U agentfleet -d postgres -c "CREATE DATABASE agentfleet_age_XX"`
+- `DATABASE_URL=postgres://agentfleet:agentfleet@localhost:5432/agentfleet_age_XX pnpm --filter @agentfleet/db drizzle-kit migrate`
+- `PORT=99XX DATABASE_URL=... WEB_URL=http://localhost:30XX pnpm --filter @agentfleet/api dev`
+- `PORT=30XX NEXT_PUBLIC_API_URL=http://localhost:99XX pnpm --filter web dev`
 - `pnpm turbo build` — production build check
+- Teardown: `kill <pids>` and `DROP DATABASE IF EXISTS agentfleet_age_XX`
 
 ### 7. Ship
 
-Commit, push, and create a PR on GitHub with ticket reference, summary, and evidence from the verify phase.
+Commit, push, create a PR, **watch CI to green**, and (post-merge) **healthcheck the Railway deployment**. Update Linear status to `In Review` on PR open and `Done` once Railway healthchecks pass.
 
 **Key commands:**
 
 - `git push -u origin <branch>`
 - `gh pr create`
+- `gh pr checks <pr-number> --watch` — block until CI completes
+- `curl` against `RAILWAY_API_HEALTH_URL` and `RAILWAY_WEB_HEALTH_URL` post-merge (5-min timeout)
+- Linear `save_issue` with `state: "In Review"` then `state: "Done"`
 
 ### 8. Review (Human Gate)
 
@@ -107,8 +120,11 @@ Human reviews the PR, CI passes, human merges and deploys.
 
 1. **Verify by proof** — run the system and capture output, don't just read code
 2. **Record at phase transitions** — progress survives session drops
-3. **Fail fast** — stuck after 2 attempts? Surface it, don't spiral
-4. **Improve through evidence** — `/harness-retro` reads conversations and reshapes skills
+3. **Record friction as it happens** — every phase skill writes to `## Harness Issues` in the conversation file when something goes wrong
+4. **Fail fast** — stuck after 2 attempts? Surface it, don't spiral
+5. **Isolate at runtime** — parallel agents get their own ports + DB so they don't step on each other
+6. **Round-trip Linear** — pickup → In Progress, ship → In Review → Done
+7. **Improve through evidence** — `/harness-retro` reads conversations and reshapes skills
 
 ## Harness Data
 
