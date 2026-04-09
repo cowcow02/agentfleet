@@ -115,7 +115,23 @@
 **Build:** pass — `pnpm --filter web build` compiled 12 static pages + 1 dynamic route in Turbopack without errors.
 **Evidence:** browser screenshot `ss_3694id8v2` (Manual Dispatch sheet open on isolated env).
 
+## Ship
+
+**Branch:** age-8-simplify-manual-dispatch
+**PR:** https://github.com/cowcow02/agentfleet/pull/6
+**Commits:** 3 (`feat(web): manual dispatch modal...`, `test(types): cover isAdHocDispatch...`, `test(api): cover findAgentByName + ad hoc...`)
+**CI:** pass after two fix pushes — https://github.com/cowcow02/agentfleet/actions/runs/24184441447
+**Linear:** AGE-8 moved to "In Review" with PR attached.
+
 ## Harness Issues
+
+### [ship] CI coverage thresholds blocked first two pushes
+
+- What happened: First push failed `types-tests` because `isAdHocDispatch` was the only function in `packages/types/src/api.ts` and had no test caller, dropping function coverage to 0% (below the 90% global threshold). Second push failed `api-tests` because branch coverage sat at 87.5% — my new `resolveDispatchTarget` ad hoc branch and `findAgentByName` body had no unit tests.
+- Root cause: The implement and quality phases ran test suites without `--coverage`, so the coverage shortfalls never surfaced locally. The `harness-quality` skill's "tests" step runs `pnpm turbo test` (or per-package equivalent) without the coverage flag that CI enforces.
+- Workaround: added `isAdHocDispatch` unit test to `packages/types/src/__tests__/api.test.ts`; added `findAgentByName` suite to `apps/api/src/lib/__tests__/machines.test.ts`; added three ad hoc dispatch tests to `apps/api/src/lib/__tests__/dispatch.test.ts` covering synthesized ticketRef, default title fallback, and NO_AGENT error. Re-pushed twice; CI went green on attempt 3.
+- Suggested fix: `harness-quality` should run `pnpm --filter <pkg> test -- --coverage` (matching CI), not the unflagged variant, so new exports/branches without tests fail fast before ship. Any time you add an exported function or a new branch, include a test for it in the same TDD cycle.
+- Turns wasted: 2 (one coverage push per threshold — first for function threshold in types, second for branch threshold in api).
 
 ### [verify] docker compose postgres collides with host-native postgres on port 5432
 
