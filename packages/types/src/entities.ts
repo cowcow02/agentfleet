@@ -14,6 +14,9 @@ export type Source = z.infer<typeof SourceEnum>;
 export const IntegrationTypeEnum = z.enum(["linear"]);
 export type IntegrationType = z.infer<typeof IntegrationTypeEnum>;
 
+export const TrackerTypeEnum = z.enum(["linear", "jira"]);
+export type TrackerType = z.infer<typeof TrackerTypeEnum>;
+
 // --- Entities ---
 
 export const DispatchMessageSchema = z.object({
@@ -71,6 +74,18 @@ export const WebhookLogEntrySchema = z.object({
   createdAt: z.string(),
 });
 export type WebhookLogEntry = z.infer<typeof WebhookLogEntrySchema>;
+
+export const ProjectSchema = z.object({
+  id: z.string().uuid(),
+  organizationId: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  trackerType: TrackerTypeEnum.nullable(),
+  trackerConfig: z.unknown().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type Project = z.infer<typeof ProjectSchema>;
 
 export const AgentSchema = z.object({
   name: z.string(),

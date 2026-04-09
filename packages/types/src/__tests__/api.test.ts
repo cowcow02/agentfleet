@@ -12,7 +12,121 @@ import {
   ListLinearIssuesResponse,
   ListWebhookLogsQuery,
   ListWebhookLogsResponse,
+  CreateProjectRequest,
+  UpdateProjectRequest,
+  ListProjectsQuery,
+  ListProjectsResponse,
+  ProjectResponse,
 } from "../api";
+
+// --- CreateProjectRequest ---
+
+describe("CreateProjectRequest", () => {
+  it("validates with name only", () => {
+    const result = CreateProjectRequest.parse({ name: "My Project" });
+    expect(result.name).toBe("My Project");
+    expect(result.slug).toBeUndefined();
+  });
+
+  it("validates with all fields", () => {
+    const result = CreateProjectRequest.parse({
+      name: "My Project",
+      slug: "my-project",
+      trackerType: "linear",
+      trackerConfig: { teamId: "team-1" },
+    });
+    expect(result.slug).toBe("my-project");
+    expect(result.trackerType).toBe("linear");
+  });
+
+  it("rejects empty name", () => {
+    expect(() => CreateProjectRequest.parse({ name: "" })).toThrow();
+  });
+
+  it("rejects invalid trackerType", () => {
+    expect(() => CreateProjectRequest.parse({ name: "P", trackerType: "github" })).toThrow();
+  });
+});
+
+// --- UpdateProjectRequest ---
+
+describe("UpdateProjectRequest", () => {
+  it("validates partial update with name only", () => {
+    const result = UpdateProjectRequest.parse({ name: "New Name" });
+    expect(result.name).toBe("New Name");
+  });
+
+  it("validates empty object (no changes)", () => {
+    const result = UpdateProjectRequest.parse({});
+    expect(result.name).toBeUndefined();
+  });
+
+  it("validates trackerType update", () => {
+    const result = UpdateProjectRequest.parse({ trackerType: "jira" });
+    expect(result.trackerType).toBe("jira");
+  });
+
+  it("allows null trackerType to remove tracker", () => {
+    const result = UpdateProjectRequest.parse({ trackerType: null });
+    expect(result.trackerType).toBeNull();
+  });
+
+  it("rejects invalid trackerType", () => {
+    expect(() => UpdateProjectRequest.parse({ trackerType: "github" })).toThrow();
+  });
+});
+
+// --- ListProjectsQuery ---
+
+describe("ListProjectsQuery", () => {
+  it("applies defaults for limit and offset", () => {
+    const result = ListProjectsQuery.parse({});
+    expect(result.limit).toBe(50);
+    expect(result.offset).toBe(0);
+  });
+
+  it("coerces string numbers", () => {
+    const result = ListProjectsQuery.parse({ limit: "10", offset: "5" });
+    expect(result.limit).toBe(10);
+    expect(result.offset).toBe(5);
+  });
+
+  it("rejects limit below 1", () => {
+    expect(() => ListProjectsQuery.parse({ limit: 0 })).toThrow();
+  });
+
+  it("rejects limit above 100", () => {
+    expect(() => ListProjectsQuery.parse({ limit: 101 })).toThrow();
+  });
+});
+
+// --- ListProjectsResponse ---
+
+describe("ListProjectsResponse", () => {
+  it("validates empty projects list", () => {
+    const result = ListProjectsResponse.parse({ projects: [], total: 0 });
+    expect(result.projects).toEqual([]);
+    expect(result.total).toBe(0);
+  });
+});
+
+// --- ProjectResponse ---
+
+describe("ProjectResponse", () => {
+  it("validates a full project response", () => {
+    const result = ProjectResponse.parse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      organizationId: "org-1",
+      name: "My Project",
+      slug: "my-project",
+      trackerType: "linear",
+      trackerConfig: { teamId: "t1" },
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+    });
+    expect(result.name).toBe("My Project");
+  });
+});
 
 // --- CreateDispatchRequest ---
 
@@ -71,7 +185,7 @@ describe("CreateDispatchRequest", () => {
         ticketRef: "T-1",
         title: "Title",
         labels: [],
-      })
+      }),
     ).toThrow("At least one label");
   });
 
@@ -81,7 +195,7 @@ describe("CreateDispatchRequest", () => {
         ticketRef: "",
         title: "Title",
         labels: ["label"],
-      })
+      }),
     ).toThrow();
   });
 
@@ -91,7 +205,7 @@ describe("CreateDispatchRequest", () => {
         ticketRef: "T-1",
         title: "",
         labels: ["label"],
-      })
+      }),
     ).toThrow();
   });
 
@@ -102,7 +216,7 @@ describe("CreateDispatchRequest", () => {
         title: "Title",
         labels: ["label"],
         priority: "urgent",
-      })
+      }),
     ).toThrow();
   });
 });
@@ -127,7 +241,7 @@ describe("CreateDispatchResponse", () => {
         agentName: "agent-1",
         machineName: "m1",
         status: "dispatched",
-      })
+      }),
     ).toThrow();
   });
 });
@@ -265,7 +379,7 @@ describe("UpdateLinearConfigRequest", () => {
       UpdateLinearConfigRequest.parse({
         apiKey: "",
         triggerStatus: "status",
-      })
+      }),
     ).toThrow();
   });
 
@@ -274,7 +388,7 @@ describe("UpdateLinearConfigRequest", () => {
       UpdateLinearConfigRequest.parse({
         apiKey: "key",
         triggerStatus: "",
-      })
+      }),
     ).toThrow();
   });
 });

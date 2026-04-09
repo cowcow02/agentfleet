@@ -4,9 +4,50 @@ import {
   DispatchStatusEnum,
   SourceEnum,
   PriorityEnum,
+  TrackerTypeEnum,
   AgentSchema,
+  ProjectSchema,
   WebhookLogEntrySchema,
 } from "./entities";
+
+// --- POST /api/projects ---
+
+export const CreateProjectRequest = z.object({
+  name: z.string().min(1),
+  slug: z.string().min(1).optional(),
+  trackerType: TrackerTypeEnum.optional(),
+  trackerConfig: z.unknown().optional(),
+});
+export type CreateProjectRequest = z.infer<typeof CreateProjectRequest>;
+
+// --- PATCH /api/projects/:id ---
+
+export const UpdateProjectRequest = z.object({
+  name: z.string().min(1).optional(),
+  slug: z.string().min(1).optional(),
+  trackerType: TrackerTypeEnum.nullable().optional(),
+  trackerConfig: z.unknown().optional(),
+});
+export type UpdateProjectRequest = z.infer<typeof UpdateProjectRequest>;
+
+// --- GET /api/projects ---
+
+export const ListProjectsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+});
+export type ListProjectsQuery = z.infer<typeof ListProjectsQuery>;
+
+export const ListProjectsResponse = z.object({
+  projects: z.array(ProjectSchema),
+  total: z.number(),
+});
+export type ListProjectsResponse = z.infer<typeof ListProjectsResponse>;
+
+// --- GET /api/projects/:id ---
+
+export const ProjectResponse = ProjectSchema;
+export type ProjectResponse = z.infer<typeof ProjectResponse>;
 
 // --- POST /api/dispatches ---
 
