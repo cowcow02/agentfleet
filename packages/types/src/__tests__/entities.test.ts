@@ -4,12 +4,14 @@ import {
   DispatchStatusEnum,
   SourceEnum,
   IntegrationTypeEnum,
+  TrackerTypeEnum,
   DispatchMessageSchema,
   DispatchSchema,
   LinearConfigSchema,
   IntegrationSchema,
   WebhookLogEntrySchema,
   AgentSchema,
+  ProjectSchema,
   ErrorResponseSchema,
 } from "../entities";
 
@@ -51,11 +53,73 @@ describe("IntegrationTypeEnum", () => {
   });
 });
 
+describe("TrackerTypeEnum", () => {
+  it.each(["linear", "jira"])("accepts '%s'", (val) => {
+    expect(TrackerTypeEnum.parse(val)).toBe(val);
+  });
+  it("rejects invalid value", () => {
+    expect(() => TrackerTypeEnum.parse("github")).toThrow();
+  });
+});
+
+// --- ProjectSchema ---
+
+const validProject = {
+  id: "550e8400-e29b-41d4-a716-446655440000",
+  organizationId: "org-1",
+  name: "My Project",
+  slug: "my-project",
+  trackerType: "linear",
+  trackerConfig: { teamId: "team-1" },
+  createdAt: "2024-01-01T00:00:00Z",
+  updatedAt: "2024-01-01T00:00:00Z",
+};
+
+describe("ProjectSchema", () => {
+  it("validates a valid project", () => {
+    const result = ProjectSchema.parse(validProject);
+    expect(result.id).toBe(validProject.id);
+    expect(result.name).toBe("My Project");
+    expect(result.slug).toBe("my-project");
+  });
+
+  it("validates with nullable trackerType and trackerConfig", () => {
+    const result = ProjectSchema.parse({
+      ...validProject,
+      trackerType: null,
+      trackerConfig: null,
+    });
+    expect(result.trackerType).toBeNull();
+    expect(result.trackerConfig).toBeNull();
+  });
+
+  it("rejects invalid uuid", () => {
+    expect(() => ProjectSchema.parse({ ...validProject, id: "not-a-uuid" })).toThrow();
+  });
+
+  it("rejects invalid trackerType", () => {
+    expect(() => ProjectSchema.parse({ ...validProject, trackerType: "github" })).toThrow();
+  });
+
+  it("rejects missing name", () => {
+    const { name, ...noName } = validProject;
+    expect(() => ProjectSchema.parse(noName)).toThrow();
+  });
+
+  it("rejects missing slug", () => {
+    const { slug, ...noSlug } = validProject;
+    expect(() => ProjectSchema.parse(noSlug)).toThrow();
+  });
+});
+
 // --- DispatchMessageSchema ---
 
 describe("DispatchMessageSchema", () => {
   it("validates a valid message", () => {
-    const result = DispatchMessageSchema.parse({ message: "hello", timestamp: "2024-01-01T00:00:00Z" });
+    const result = DispatchMessageSchema.parse({
+      message: "hello",
+      timestamp: "2024-01-01T00:00:00Z",
+    });
     expect(result.message).toBe("hello");
   });
   it("rejects missing message", () => {
@@ -162,14 +226,12 @@ describe("LinearConfigSchema", () => {
 
   it("rejects missing apiKey", () => {
     expect(() =>
-      LinearConfigSchema.parse({ triggerStatus: "In Progress", triggerLabels: [] })
+      LinearConfigSchema.parse({ triggerStatus: "In Progress", triggerLabels: [] }),
     ).toThrow();
   });
 
   it("rejects missing triggerStatus", () => {
-    expect(() =>
-      LinearConfigSchema.parse({ apiKey: "key", triggerLabels: [] })
-    ).toThrow();
+    expect(() => LinearConfigSchema.parse({ apiKey: "key", triggerLabels: [] })).toThrow();
   });
 });
 
@@ -209,7 +271,7 @@ describe("IntegrationSchema", () => {
         config: {},
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z",
-      })
+      }),
     ).toThrow();
   });
 });
@@ -252,9 +314,7 @@ describe("WebhookLogEntrySchema", () => {
   });
 
   it("rejects invalid dispatchId (non-uuid)", () => {
-    expect(() =>
-      WebhookLogEntrySchema.parse({ ...validEntry, dispatchId: "bad-id" })
-    ).toThrow();
+    expect(() => WebhookLogEntrySchema.parse({ ...validEntry, dispatchId: "bad-id" })).toThrow();
   });
 
   it("rejects missing integration", () => {

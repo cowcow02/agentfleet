@@ -10,6 +10,26 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+// --- projects ---
+
+export const projects = pgTable(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    trackerType: text("tracker_type", { enum: ["linear", "jira"] }),
+    trackerConfig: jsonb("tracker_config"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_projects_org").on(table.organizationId),
+    uniqueIndex("idx_projects_org_slug").on(table.organizationId, table.slug),
+  ],
+);
+
 // --- dispatches ---
 
 export const dispatches = pgTable(
