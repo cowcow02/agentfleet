@@ -4,12 +4,14 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { createDispatch, fetchLinearIssues } from "@/lib/api";
 import type { LinearIssue } from "@agentfleet/types";
+import { ManualDispatchSheet } from "@/components/manual-dispatch-sheet";
 
 export function DispatchForm() {
   const [linearIssues, setLinearIssues] = useState<LinearIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
 
   useEffect(() => {
     fetchLinearIssues()
@@ -48,6 +50,7 @@ export function DispatchForm() {
         <span>Tickets</span>
         <button
           type="button"
+          onClick={() => setManualOpen(true)}
           style={{
             background: "transparent",
             border: "1px solid var(--af-border-subtle)",
@@ -64,6 +67,8 @@ export function DispatchForm() {
           Manual Dispatch
         </button>
       </div>
+
+      <ManualDispatchSheet open={manualOpen} onOpenChange={setManualOpen} />
 
       <div style={{ padding: 8, minHeight: 200 }}>
         {loading && (

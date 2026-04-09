@@ -1,8 +1,42 @@
 import { db, dispatches, transcriptEvents } from "@agentfleet/db";
 import { eq, and } from "drizzle-orm";
-import { findAgentForDispatch } from "./machines";
+import { randomUUID } from "node:crypto";
+import { findAgentForDispatch, findAgentByName } from "./machines";
 import { eventBus } from "./events";
-import type { CreateDispatchRequest } from "@agentfleet/types";
+import { isAdHocDispatch, type CreateDispatchRequest } from "@agentfleet/types";
+
+/**
+ * Resolve a dispatch request into DB row values: find the target agent and
+ * normalize ticket metadata. Ad hoc requests get a synthetic ticketRef and
+ * an empty label set; ticket-based requests flow through unchanged.
+ */
+function resolveDispatchTarget(orgId: string, request: CreateDispatchRequest) {
+  if (isAdHocDispatch(request)) {
+    const match = findAgentByName(orgId, request.machineName, request.agentName);
+    if (!match) return null;
+    return {
+      agent: match.agent,
+      machine: match.machine,
+      ticketRef: `ADHOC-${randomUUID().slice(0, 8).toUpperCase()}`,
+      title: request.description?.trim().slice(0, 80) || "Ad hoc task",
+      description: request.description ?? null,
+      labels: [] as string[],
+      priority: "medium" as const,
+    };
+  }
+
+  const match = findAgentForDispatch(orgId, request.labels);
+  if (!match) return null;
+  return {
+    agent: match.agent,
+    machine: match.machine,
+    ticketRef: request.ticketRef,
+    title: request.title,
+    description: request.description ?? null,
+    labels: request.labels,
+    priority: request.priority ?? "medium",
+  };
+}
 
 /**
  * Find a matching agent, create a dispatch in DB, send WS dispatch command.
@@ -14,24 +48,23 @@ export async function createDispatch(
   source: "manual" | "linear",
   userId?: string | null,
 ) {
-  // Find matching agent
-  const match = findAgentForDispatch(orgId, request.labels);
-  if (!match) {
+  const target = resolveDispatchTarget(orgId, request);
+  if (!target) {
     return { error: "No matching agent with available capacity", code: "NO_AGENT" };
   }
 
-  const { agent, machine } = match;
+  const { agent, machine } = target;
 
   // Insert dispatch into DB
   const [dispatch] = await db
     .insert(dispatches)
     .values({
       organizationId: orgId,
-      ticketRef: request.ticketRef,
-      title: request.title,
-      description: request.description ?? null,
-      labels: request.labels,
-      priority: request.priority ?? "medium",
+      ticketRef: target.ticketRef,
+      title: target.title,
+      description: target.description,
+      labels: target.labels,
+      priority: target.priority,
       agentName: agent.name,
       machineName: machine.name,
       createdBy: userId ?? null,

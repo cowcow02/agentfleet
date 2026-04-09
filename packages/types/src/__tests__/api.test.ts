@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   CreateDispatchRequest,
+  TicketDispatchRequest,
+  isAdHocDispatch,
   CreateDispatchResponse,
   ListDispatchesQuery,
   ListDispatchesResponse,
@@ -132,7 +134,7 @@ describe("ProjectResponse", () => {
 
 describe("CreateDispatchRequest", () => {
   it("validates a valid request", () => {
-    const result = CreateDispatchRequest.parse({
+    const result = TicketDispatchRequest.parse({
       ticketRef: "TICKET-1",
       title: "Fix bug",
       labels: ["backend"],
@@ -142,7 +144,7 @@ describe("CreateDispatchRequest", () => {
   });
 
   it("applies default priority of medium", () => {
-    const result = CreateDispatchRequest.parse({
+    const result = TicketDispatchRequest.parse({
       ticketRef: "T-1",
       title: "Title",
       labels: ["label"],
@@ -151,7 +153,7 @@ describe("CreateDispatchRequest", () => {
   });
 
   it("allows explicit priority", () => {
-    const result = CreateDispatchRequest.parse({
+    const result = TicketDispatchRequest.parse({
       ticketRef: "T-1",
       title: "Title",
       labels: ["label"],
@@ -161,7 +163,7 @@ describe("CreateDispatchRequest", () => {
   });
 
   it("allows optional description", () => {
-    const result = CreateDispatchRequest.parse({
+    const result = TicketDispatchRequest.parse({
       ticketRef: "T-1",
       title: "Title",
       labels: ["label"],
@@ -171,7 +173,7 @@ describe("CreateDispatchRequest", () => {
   });
 
   it("description is undefined when omitted", () => {
-    const result = CreateDispatchRequest.parse({
+    const result = TicketDispatchRequest.parse({
       ticketRef: "T-1",
       title: "Title",
       labels: ["label"],
@@ -218,6 +220,66 @@ describe("CreateDispatchRequest", () => {
         priority: "urgent",
       }),
     ).toThrow();
+  });
+
+  // --- Ad hoc variant ---
+
+  it("validates an ad hoc request with only agentName + machineName", () => {
+    const result = CreateDispatchRequest.parse({
+      agentName: "worker-1",
+      machineName: "mac-mini-01",
+    });
+    expect("agentName" in result && result.agentName).toBe("worker-1");
+    expect("machineName" in result && result.machineName).toBe("mac-mini-01");
+  });
+
+  it("validates an ad hoc request with description", () => {
+    const result = CreateDispatchRequest.parse({
+      agentName: "worker-1",
+      machineName: "mac-mini-01",
+      description: "Run a one-off task",
+    });
+    expect("description" in result && result.description).toBe("Run a one-off task");
+  });
+
+  it("rejects ad hoc with empty agentName", () => {
+    expect(() =>
+      CreateDispatchRequest.parse({
+        agentName: "",
+        machineName: "mac-mini-01",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects ad hoc with empty machineName", () => {
+    expect(() =>
+      CreateDispatchRequest.parse({
+        agentName: "worker-1",
+        machineName: "",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects payload matching neither ticket nor ad hoc shape", () => {
+    expect(() =>
+      CreateDispatchRequest.parse({
+        foo: "bar",
+      }),
+    ).toThrow();
+  });
+
+  it("isAdHocDispatch discriminates between union arms", () => {
+    const ticket = CreateDispatchRequest.parse({
+      ticketRef: "T-9",
+      title: "T",
+      labels: ["lbl"],
+    });
+    const adhoc = CreateDispatchRequest.parse({
+      agentName: "worker-1",
+      machineName: "mac-01",
+    });
+    expect(isAdHocDispatch(ticket)).toBe(false);
+    expect(isAdHocDispatch(adhoc)).toBe(true);
   });
 });
 

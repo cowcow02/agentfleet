@@ -30,6 +30,7 @@ vi.mock("@agentfleet/db", () => {
 // Mock machines
 vi.mock("../machines", () => ({
   findAgentForDispatch: vi.fn(),
+  findAgentByName: vi.fn(),
 }));
 
 // Mock events
@@ -49,7 +50,7 @@ import {
   appendTranscriptEvent,
   serializeDispatch,
 } from "../dispatch";
-import { findAgentForDispatch } from "../machines";
+import { findAgentForDispatch, findAgentByName } from "../machines";
 import { eventBus } from "../events";
 
 const now = new Date("2024-06-01T12:00:00Z");
@@ -171,6 +172,104 @@ describe("dispatch", () => {
       // The WS message should have description as undefined (via ?? undefined)
       const wsMsg = JSON.parse(ws.send.mock.calls[0][0]);
       expect(wsMsg.ticket.description).toBeUndefined();
+    });
+
+    it("routes ad hoc requests via findAgentByName and synthesizes ticket metadata", async () => {
+      const ws = { send: vi.fn() };
+      const agent = { name: "worker-1", tags: [], capacity: 2, running: 0 };
+      const machine = { name: "mac-01", ws, orgId: "org1", agents: new Map() };
+      vi.mocked(findAgentByName).mockReturnValue({ agent, machine: machine as any });
+
+      mockInsert.mockImplementation((values) =>
+        Promise.resolve([
+          makeFakeDispatchRow({
+            ...values,
+            id: "d-adhoc",
+            ticketRef: values.ticketRef,
+            title: values.title,
+            description: values.description,
+            labels: values.labels,
+          }),
+        ]),
+      );
+
+      const result = await createDispatch(
+        "org1",
+        {
+          agentName: "worker-1",
+          machineName: "mac-01",
+          description: "one-off cleanup task",
+        },
+        "manual",
+        "user1",
+      );
+
+      expect(findAgentByName).toHaveBeenCalledWith("org1", "mac-01", "worker-1");
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ticketRef: expect.stringMatching(/^ADHOC-[0-9A-F]{8}$/),
+          title: "one-off cleanup task",
+          description: "one-off cleanup task",
+          labels: [],
+          priority: "medium",
+          agentName: "worker-1",
+          machineName: "mac-01",
+          source: "manual",
+        }),
+      );
+      expect(ws.send).toHaveBeenCalled();
+      expect(result).toMatchObject({
+        id: "d-adhoc",
+        agentName: "worker-1",
+        machineName: "mac-01",
+        status: "dispatched",
+      });
+    });
+
+    it("synthesizes a default title when the ad hoc description is missing", async () => {
+      const ws = { send: vi.fn() };
+      const agent = { name: "worker-1", tags: [], capacity: 2, running: 0 };
+      const machine = { name: "mac-01", ws, orgId: "org1", agents: new Map() };
+      vi.mocked(findAgentByName).mockReturnValue({ agent, machine: machine as any });
+
+      mockInsert.mockImplementation((values) =>
+        Promise.resolve([makeFakeDispatchRow({ ...values, id: "d-adhoc-2" })]),
+      );
+
+      await createDispatch(
+        "org1",
+        {
+          agentName: "worker-1",
+          machineName: "mac-01",
+        },
+        "manual",
+      );
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Ad hoc task",
+          description: null,
+        }),
+      );
+    });
+
+    it("returns NO_AGENT when the ad hoc target cannot be found", async () => {
+      vi.mocked(findAgentByName).mockReturnValue(null);
+
+      const result = await createDispatch(
+        "org1",
+        {
+          agentName: "ghost",
+          machineName: "mac-01",
+        },
+        "manual",
+      );
+
+      expect(result).toEqual({
+        error: "No matching agent with available capacity",
+        code: "NO_AGENT",
+      });
+      expect(mockInsert).not.toHaveBeenCalled();
     });
   });
 
