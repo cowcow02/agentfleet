@@ -24,6 +24,7 @@ import {
   getMachineCountForOrg,
   getRunningJobsForOrg,
   findAgentForDispatch,
+  findAgentByName,
 } from "../machines";
 import { eventBus } from "../events";
 
@@ -274,6 +275,49 @@ describe("machines", () => {
 
       const result = findAgentForDispatch(testOrg, ["ts"]);
       expect(result).toBeNull();
+    });
+  });
+
+  describe("findAgentByName", () => {
+    it("returns the agent+machine for an exact (org, machine, agent) match", () => {
+      const ws = makeWs();
+      registerMachine(testOrg, "m1", ws, [
+        { name: "worker-1", tags: ["ts"], capacity: 2 },
+        { name: "worker-2", tags: ["py"], capacity: 2 },
+      ]);
+
+      const result = findAgentByName(testOrg, "m1", "worker-2");
+      expect(result).not.toBeNull();
+      expect(result!.agent.name).toBe("worker-2");
+      expect(result!.machine.name).toBe("m1");
+    });
+
+    it("returns null when the machine is not registered", () => {
+      expect(findAgentByName(testOrg, "no-such-machine", "worker-1")).toBeNull();
+    });
+
+    it("returns null when the agent does not exist on the machine", () => {
+      const ws = makeWs();
+      registerMachine(testOrg, "m1", ws, [{ name: "worker-1", tags: ["ts"], capacity: 1 }]);
+
+      expect(findAgentByName(testOrg, "m1", "ghost")).toBeNull();
+    });
+
+    it("returns null when the agent is already at capacity", () => {
+      const ws = makeWs();
+      const m = registerMachine(testOrg, "m1", ws, [
+        { name: "worker-1", tags: ["ts"], capacity: 1 },
+      ]);
+      m.agents.get("worker-1")!.running = 1;
+
+      expect(findAgentByName(testOrg, "m1", "worker-1")).toBeNull();
+    });
+
+    it("does not match a machine from a different org", () => {
+      const ws = makeWs();
+      registerMachine(testOrg2, "m1", ws, [{ name: "worker-1", tags: ["ts"], capacity: 1 }]);
+
+      expect(findAgentByName(testOrg, "m1", "worker-1")).toBeNull();
     });
   });
 });
