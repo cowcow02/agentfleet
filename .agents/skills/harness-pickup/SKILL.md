@@ -19,11 +19,14 @@ Load the task context so all subsequent phases have a clear picture of what to b
    - Use the description as-is
    - Note: no labels or priority available, downstream phases should infer from content
 
-3. **Update Linear status to "In Progress"** — if the task is a Linear ticket (AGE-XX pattern):
-   - Use `mcp__plugin_linear_linear__save_issue` with `state: "In Progress"`
-   - This signals the team that work has started without manual board updates
-   - Skip silently if the ticket is already in `In Progress` or a later state
-   - Skip entirely for plain-text tasks (no Linear ticket)
+3. **Update Linear ticket — assign to self and move to "In Progress"** — if the task is a Linear ticket (AGE-XX pattern):
+   - Use a single `mcp__plugin_linear_linear__save_issue` call with both:
+     - `state: "In Progress"`
+     - `assignee: "me"`
+   - This signals the team that work has started AND who is doing it, without manual board updates
+   - The `assignee: "me"` resolves to the authenticated Linear user behind the MCP — safe to call even if already assigned to self (idempotent)
+   - Skip the state update silently if the ticket is already in `In Progress` or a later state, but still set the assignee
+   - Skip the entire step for plain-text tasks (no Linear ticket)
 
 4. **Write to state outputs:**
 
@@ -47,6 +50,7 @@ Load the task context so all subsequent phases have a clear picture of what to b
    **Ticket:** AGE-XX — <title>
    **Priority:** <priority>
    **Linear status:** moved to In Progress
+   **Linear assignee:** self
    **Description:** <summary>
 
    <!-- Subsequent phases append their sections below -->
@@ -70,7 +74,7 @@ Load the task context so all subsequent phases have a clear picture of what to b
 ## Checklist
 
 - [ ] Ticket/task context loaded
-- [ ] Linear ticket moved to "In Progress" (Linear tickets only)
+- [ ] Linear ticket moved to "In Progress" and assigned to self (Linear tickets only)
 - [ ] Context written to state outputs
 - [ ] Conversation file initialized with Harness Issues section
 
