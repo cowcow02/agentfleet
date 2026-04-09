@@ -5,11 +5,11 @@ Every ticket follows a disciplined, phased workflow. Each phase is a focused ski
 ## Architecture
 
 ```
-/implement AGE-XX → harness-engine → [pickup] → [understand] → [plan] → [implement] → [quality] → [verify] → [ship] → COMPLETE
+/implement AGE-XX → harness-engine → [pickup] → [understand] → [plan] → [implement] → [quality] → [verify] → [ship] → (review: human gate) → [cleanup] → COMPLETE
 ```
 
 - `/implement` — the launcher (the skill you invoke)
-- 7 phase skills — focused work per phase
+- 8 agent phase skills + 1 human gate (`review`)
 - `harness-engine` — universal state machine that loops through phases (ships with Harnessable)
 
 ## The Harness Loop
@@ -79,21 +79,31 @@ Start the app on a **per-task isolated environment** and prove the deliverable w
 - `pnpm turbo build` — production build check
 - Teardown: `kill <pids>` and `DROP DATABASE IF EXISTS agentfleet_age_XX`
 
-### 7. Ship
+### 7. Ship (pre-merge)
 
-Commit, push, create a PR, **watch CI to green**, and (post-merge) **healthcheck the Railway deployment**. Update Linear status to `In Review` on PR open and `Done` once Railway healthchecks pass.
+Commit (including the conversation file), push, create a PR, update Linear → `In Review`, and **watch CI to green**. Ends with the engine entering the `review` waiting gate. **Does NOT merge, healthcheck, or remove the worktree** — those are `cleanup`'s job.
 
 **Key commands:**
 
 - `git push -u origin <branch>`
 - `gh pr create`
 - `gh pr checks <pr-number> --watch` — block until CI completes
-- `curl` against `RAILWAY_API_HEALTH_URL` and `RAILWAY_WEB_HEALTH_URL` post-merge (5-min timeout)
-- Linear `save_issue` with `state: "In Review"` then `state: "Done"`
+- Linear `save_issue` with `state: "In Review"`
 
-### 8. Review (Human Gate)
+### 8. Review (human gate)
 
-Human reviews the PR, CI passes, human merges and deploys.
+Human reviews the PR on GitHub. When approved, the human tells the agent "approved, go merge it" — session recovery flips `review` to `done` and the engine resumes into `cleanup`.
+
+### 9. Cleanup (post-merge)
+
+Agent merges the approved PR, healthchecks the Railway deployment, moves Linear to `Done`, records the cleanup section to the conversation file (committed directly to master), and finally removes the worktree (with a hard safety check — never `--force`).
+
+**Key commands:**
+
+- `gh pr merge <pr-number> --squash --delete-branch`
+- `curl` against `RAILWAY_API_HEALTH_URL` and `RAILWAY_WEB_HEALTH_URL` (5-min timeout)
+- Linear `save_issue` with `state: "Done"`
+- `git worktree remove <path>` (only if `git status --porcelain` is empty)
 
 ## Profiles
 
@@ -105,16 +115,17 @@ Human reviews the PR, CI passes, human merges and deploys.
 
 ## Generated Skills
 
-| Skill                | Purpose                                               | User-invocable |
-| -------------------- | ----------------------------------------------------- | -------------- |
-| `/implement`         | Launcher — pick up ticket and start the workflow      | Yes            |
-| `harness-pickup`     | Fetch ticket context from Linear                      | No             |
-| `harness-understand` | Explore codebase and identify scope                   | No             |
-| `harness-plan`       | Create implementation plan with TDD strategy          | No             |
-| `harness-implement`  | TDD implementation — tests first                      | No             |
-| `harness-quality`    | Run typecheck, tests, lint, format                    | No             |
-| `harness-verify`     | Start app, verify deliverable with browser/API checks | No             |
-| `harness-ship`       | Commit, push, create PR                               | No             |
+| Skill                | Purpose                                                       | User-invocable |
+| -------------------- | ------------------------------------------------------------- | -------------- |
+| `/implement`         | Launcher — pick up ticket and start the workflow              | Yes            |
+| `harness-pickup`     | Fetch ticket context from Linear, move ticket to In Progress  | No             |
+| `harness-understand` | Explore codebase and identify scope                           | No             |
+| `harness-plan`       | Create implementation plan with TDD strategy                  | No             |
+| `harness-implement`  | TDD implementation — tests first                              | No             |
+| `harness-quality`    | Run typecheck, tests, lint, format                            | No             |
+| `harness-verify`     | Start app on isolated port/DB, verify deliverable             | No             |
+| `harness-ship`       | Commit, push, create PR, watch CI, set Linear In Review       | No             |
+| `harness-cleanup`    | Merge PR, Railway healthcheck, Linear → Done, remove worktree | No             |
 
 ## Core Principles
 

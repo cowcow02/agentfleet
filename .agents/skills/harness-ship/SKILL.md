@@ -1,12 +1,14 @@
 ---
 name: harness-ship
-description: "Phase skill: commit changes, push branch, and create a GitHub pull request"
+description: "Phase skill: commit changes, push branch, create a GitHub pull request, and watch CI to green"
 user-invocable: false
 ---
 
 ## Purpose
 
-Package the work into a well-described PR linked to the Linear ticket.
+Package the work into a well-described PR linked to the Linear ticket, then watch CI to green so the human review gate has a known-good state to evaluate.
+
+**Scope:** ship is **pre-merge only**. PR merge, Railway healthcheck, Linear "Done", and worktree removal happen in `harness-cleanup` after the human approves and the `review` phase flips from waiting to done.
 
 ## Steps
 
@@ -67,37 +69,7 @@ Package the work into a well-described PR linked to the Linear ticket.
    - On failure: read the failing job's logs (`gh run view <run-id> --log-failed`), attempt one fix, push, and re-watch
    - After 2 fix attempts → surface to human with the failing log
 
-7. **Verify Railway deployment** — once CI is green, the PR will eventually get merged. For _post-merge_ deploy verification, this step targets the **production** environment after merge. Until merge happens, skip to step 8 and the human review gate.
-
-   When the PR is merged (re-entered after the `review` gate completes), perform:
-
-   ```bash
-   # Read the production URLs from state config (set per-repo). Defaults below.
-   API_HEALTH_URL="${RAILWAY_API_HEALTH_URL:-https://api.agentfleet.app/health}"
-   WEB_HEALTH_URL="${RAILWAY_WEB_HEALTH_URL:-https://app.agentfleet.app/}"
-
-   # Poll API healthcheck until it returns 200 or timeout (max 5 min)
-   for i in $(seq 1 30); do
-     STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_HEALTH_URL")
-     [ "$STATUS" = "200" ] && break
-     sleep 10
-   done
-
-   # Same for web
-   for i in $(seq 1 30); do
-     STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$WEB_HEALTH_URL")
-     [ "$STATUS" = "200" ] && break
-     sleep 10
-   done
-   ```
-
-   - If both healthchecks return 200 within timeout: record `deploy_verified: true` in state
-   - If either times out or returns non-200: surface to human with the URL and last status code
-   - If `RAILWAY_API_HEALTH_URL` / `RAILWAY_WEB_HEALTH_URL` are not configured, skip with a note in conversation file (no Railway URLs known yet)
-
-8. **Update Linear ticket on deploy success** — once both healthchecks pass, move the ticket to `Done` via `mcp__plugin_linear_linear__save_issue` with `state: "Done"`.
-
-9. **Record to conversation file:**
+7. **Record to conversation file:**
    - Append to `.harness/conversations/<task-id>.md`:
      ```
      ## Ship
@@ -105,63 +77,36 @@ Package the work into a well-described PR linked to the Linear ticket.
      **PR:** <url>
      **Commits:** <count>
      **CI:** pass (run: <url>) / fail
-     **Railway deploy:** verified (api: <status>, web: <status>) / skipped (no URLs configured) / failed
-     **Linear final status:** Done / In Review
      ```
-   - **If you hit friction** (CI failed and required a fix, deploy timeout, healthcheck flake, Linear update failed), append an entry to the `## Harness Issues` section at the bottom of the file.
+   - **If you hit friction** (CI failed and required a fix, push rejected, PR creation failed), append an entry to the `## Harness Issues` section at the bottom of the file.
 
-10. **Commit & push the ship-phase conversation update** — step 9 wrote the `## Ship` section to the conversation file _after_ the initial commit in step 1, so those changes are uncommitted. Capture them in a follow-up commit so they survive worktree cleanup and are visible on the PR:
+8. **Commit & push the ship-phase conversation update** — step 7 wrote the `## Ship` section to the conversation file _after_ the initial commit in step 1, so those changes are uncommitted. Capture them in a follow-up commit so they survive worktree cleanup and are visible on the PR:
 
-    ```bash
-    git add .harness/conversations/<task-id>.md
-    git commit -m "chore: record ship phase to AGE-XX conversation log"
-    git push
-    ```
+   ```bash
+   git add .harness/conversations/<task-id>.md
+   git commit -m "chore: record ship phase to <task-id> conversation log"
+   git push
+   ```
 
-    If there are no changes (e.g. ship section was somehow already committed), skip silently.
+   If there are no changes, skip silently.
 
-11. **Set review phase to `waiting`** — human reviews the PR (CI watch and pre-merge gating happens before this; deploy watch happens after)
+9. **Mark ship phase done.** The engine will move to the `review` phase, see status `waiting`, and stop. The human reviews on GitHub and signals approval. Once review flips to `done`, the engine resumes into `harness-cleanup`, which performs the merge, Railway healthcheck, Linear → "Done", and worktree removal.
 
-12. **Cleanup worktree** — if `state.worktree` exists in the state file:
-
-    ```bash
-    REPO_ROOT=$(git worktree list --porcelain | head -1 | sed 's/worktree //')
-    WORKTREE_PATH=$(pwd)
-
-    # SAFETY: never remove a worktree with unstaged or untracked files —
-    # we lost AGE-11's conversation file this way. Surface to human instead.
-    DIRTY=$(git status --porcelain)
-    if [ -n "$DIRTY" ]; then
-      echo "ERROR: worktree has uncommitted changes — refusing to remove."
-      echo "$DIRTY"
-      # Stop here, surface to human, do NOT use --force
-      exit 1
-    fi
-
-    cd "$REPO_ROOT"
-    git worktree remove "$WORKTREE_PATH"
-    ```
-
-    This frees disk space and avoids stale worktrees accumulating. **Never use `--force`** — if the worktree is dirty, something was missed in steps 1 or 10.
+   **Do not** merge the PR, run Railway checks, or remove the worktree from this skill — those are `harness-cleanup`'s job.
 
 ## Checklist
 
 - [ ] All code changes + conversation file committed with descriptive message
 - [ ] Branch pushed to origin
 - [ ] PR created with ticket reference and summary
-- [ ] PR URL captured in state
+- [ ] PR URL + PR number captured in state
 - [ ] Linear ticket updated to "In Review" (status + PR link)
 - [ ] CI watched to completion — green or surfaced to human
-- [ ] Railway deploy healthchecked post-merge (or skipped with note)
-- [ ] Linear ticket moved to "Done" on deploy success
 - [ ] Ship-phase conversation update committed and pushed as follow-up
-- [ ] Review phase set to waiting
-- [ ] Worktree clean before removal (no `--force`); cleaned up on success
+- [ ] Phase marked done (engine will proceed to `review` waiting gate)
 
 ## Escalation
 
 - If `git push` fails (e.g., auth issue), tell the human
 - If CI fails on the PR, read the failure and attempt to fix — then push again
 - After 2 CI fix attempts → surface to human
-- If Railway healthcheck times out or returns non-200, surface to human with URL and last status — do not retry endlessly
-- If the worktree is dirty at cleanup time, surface to human with the dirty file list — never `--force` remove. The conversation file is the most common offender; double-check it was staged in step 1 and any post-PR updates were committed in step 10
