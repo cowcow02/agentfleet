@@ -15,6 +15,13 @@
       "when": 1775671502119,
       "tag": "0001_aromatic_skrulls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775700404661,
+      "tag": "0002_past_captain_cross",
+      "breakpoints": true
     }
   ]
 }
