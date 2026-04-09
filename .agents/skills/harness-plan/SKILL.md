@@ -37,13 +37,16 @@ Produce a concrete plan that covers all acceptance criteria with a TDD approach.
    ```
 
 5. **Record to conversation file:**
-   - Append to `.harness/conversations/<task-id>.md`:
+   - **Insert before** the `## Harness Issues` marker in `.harness/conversations/<task-id>.md` (use Edit tool with `## Harness Issues` as the anchor — do NOT literally append, that would land below the issues section):
+
      ```
      ## Plan
      **Approach:** <summary>
      **Test strategy:** <TDD approach>
      **Files to change:** <count>
      ```
+
+   - **If you hit friction** while planning (had to revise the plan, ambiguous requirements, blocked on unknowns), append an entry to the **literal end** of the file — it will land inside the `## Harness Issues` section since that section is last.
 
 6. **If profile is `full`:** set phase status to `waiting` — human reviews the plan before implementation starts. Present the plan clearly and ask for approval.
 

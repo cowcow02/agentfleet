@@ -34,6 +34,8 @@ const HUB_BASE =
   process.env.AGENTFLEET_HUB || manifest.hub || configData.hub || "ws://localhost:9900";
 // Ensure WS connects to the /ws endpoint
 const HUB_URL = HUB_BASE.replace(/\/$/, "") + "/ws";
+// HTTP base URL for OTLP telemetry endpoint (convert ws:// to http://)
+const HUB_HTTP = HUB_BASE.replace(/^ws(s?):\/\//, "http$1://").replace(/\/$/, "");
 const TOKEN = process.env.AGENTFLEET_TOKEN || manifest.token || configData.token || "";
 const MACHINE_NAME = manifest.machine_name || configData.machine_name || os.hostname();
 const agents = manifest.agents || [];
@@ -225,16 +227,29 @@ function handleDispatch(msg) {
       .replace(/\{session_id\}/g, sessionId);
   };
 
+  // OTLP telemetry env vars — tells Claude Code to stream telemetry to the hub
+  const otlpEnv = {
+    ...process.env,
+    CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+    OTEL_METRICS_EXPORTER: "otlp",
+    OTEL_LOGS_EXPORTER: "otlp",
+    OTEL_EXPORTER_OTLP_PROTOCOL: "http/json",
+    OTEL_EXPORTER_OTLP_ENDPOINT: HUB_HTTP,
+    OTEL_EXPORTER_OTLP_HEADERS: `authorization=Bearer ${TOKEN},x-dispatch-id=${dispatch_id}`,
+  };
+
   if (typeof launcher === "string" && launcher !== "headless") {
     const launchCmd = interpolateLauncher(launcher);
     log(`[${agentName}] Launching: ${launchCmd}`);
     child = spawn("sh", ["-c", launchCmd], {
       stdio: ["ignore", "pipe", "pipe"],
+      env: otlpEnv,
     });
   } else {
     // Headless — piped stdio, no visible terminal
     child = spawn("sh", ["-c", `cd "${workdir}" && ${cmd}`], {
       stdio: ["ignore", "pipe", "pipe"],
+      env: otlpEnv,
     });
   }
 

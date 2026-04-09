@@ -8,6 +8,7 @@ import {
   AgentSchema,
   ProjectSchema,
   WebhookLogEntrySchema,
+  DispatchUsageSchema,
 } from "./entities";
 
 // --- POST /api/projects ---
@@ -156,3 +157,108 @@ export const ListWebhookLogsResponse = z.object({
   total: z.number(),
 });
 export type ListWebhookLogsResponse = z.infer<typeof ListWebhookLogsResponse>;
+
+// --- OTLP Telemetry ---
+
+// Minimal OTLP key-value attribute
+const OtlpAnyValue = z.union([
+  z.object({ stringValue: z.string() }),
+  z.object({ intValue: z.union([z.string(), z.number()]) }),
+  z.object({ doubleValue: z.number() }),
+  z.object({ boolValue: z.boolean() }),
+  z.object({ arrayValue: z.object({ values: z.array(z.any()) }) }),
+  z.object({ kvlistValue: z.object({ values: z.array(z.any()) }) }),
+]);
+
+const OtlpKeyValue = z.object({
+  key: z.string(),
+  value: OtlpAnyValue.optional(),
+});
+
+const OtlpResource = z
+  .object({
+    attributes: z.array(OtlpKeyValue).optional(),
+  })
+  .optional();
+
+// POST /v1/logs
+const OtlpLogRecord = z.object({
+  timeUnixNano: z.union([z.string(), z.number()]).optional(),
+  severityText: z.string().optional(),
+  severityNumber: z.number().optional(),
+  body: z.any().optional(),
+  attributes: z.array(OtlpKeyValue).optional(),
+});
+
+const OtlpScopeLog = z.object({
+  logRecords: z.array(OtlpLogRecord).optional().default([]),
+});
+
+const OtlpResourceLog = z.object({
+  resource: OtlpResource,
+  scopeLogs: z.array(OtlpScopeLog).optional().default([]),
+});
+
+export const OtlpLogsRequest = z.object({
+  resourceLogs: z.array(OtlpResourceLog).optional().default([]),
+});
+export type OtlpLogsRequest = z.infer<typeof OtlpLogsRequest>;
+
+// POST /v1/metrics
+const OtlpNumberDataPoint = z.object({
+  timeUnixNano: z.union([z.string(), z.number()]).optional(),
+  asInt: z.union([z.string(), z.number()]).optional(),
+  asDouble: z.number().optional(),
+  attributes: z.array(OtlpKeyValue).optional(),
+});
+
+const OtlpMetric = z.object({
+  name: z.string(),
+  unit: z.string().optional(),
+  sum: z.object({ dataPoints: z.array(OtlpNumberDataPoint).optional().default([]) }).optional(),
+  gauge: z.object({ dataPoints: z.array(OtlpNumberDataPoint).optional().default([]) }).optional(),
+});
+
+const OtlpScopeMetric = z.object({
+  metrics: z.array(OtlpMetric).optional().default([]),
+});
+
+const OtlpResourceMetric = z.object({
+  resource: OtlpResource,
+  scopeMetrics: z.array(OtlpScopeMetric).optional().default([]),
+});
+
+export const OtlpMetricsRequest = z.object({
+  resourceMetrics: z.array(OtlpResourceMetric).optional().default([]),
+});
+export type OtlpMetricsRequest = z.infer<typeof OtlpMetricsRequest>;
+
+// POST /v1/traces
+const OtlpSpan = z.object({
+  traceId: z.string(),
+  spanId: z.string(),
+  parentSpanId: z.string().optional(),
+  name: z.string(),
+  kind: z.number().optional(),
+  startTimeUnixNano: z.union([z.string(), z.number()]).optional(),
+  endTimeUnixNano: z.union([z.string(), z.number()]).optional(),
+  attributes: z.array(OtlpKeyValue).optional(),
+  status: z.object({ code: z.number().optional(), message: z.string().optional() }).optional(),
+});
+
+const OtlpScopeSpan = z.object({
+  spans: z.array(OtlpSpan).optional().default([]),
+});
+
+const OtlpResourceSpan = z.object({
+  resource: OtlpResource,
+  scopeSpans: z.array(OtlpScopeSpan).optional().default([]),
+});
+
+export const OtlpTracesRequest = z.object({
+  resourceSpans: z.array(OtlpResourceSpan).optional().default([]),
+});
+export type OtlpTracesRequest = z.infer<typeof OtlpTracesRequest>;
+
+// Reexport DispatchUsageSchema for convenience
+export { DispatchUsageSchema };

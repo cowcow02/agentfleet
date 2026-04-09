@@ -43,14 +43,18 @@ Ensure the codebase passes all static and dynamic quality checks before verifica
    If files are unformatted, run `pnpm prettier --write` on the changed files only.
 
 5. **Record to conversation file:**
-   - Append to `.harness/conversations/<task-id>.md`:
+   - **Insert before** the `## Harness Issues` marker in `.harness/conversations/<task-id>.md` (use Edit tool with `## Harness Issues` as the anchor — do NOT literally append, that would land below the issues section):
+
      ```
      ## Quality
      **Typecheck:** pass/fail
      **Tests:** X passed, Y failed
      **Lint:** pass/fail
      **Format:** pass/fail
+     **Pre-existing issues noted:** <list any errors in files you didn't touch>
      ```
+
+   - **If you hit friction** (broken pre-existing checks blocking you, flaky tests, slow checks), append an entry to the **literal end** of the file — it will land inside the `## Harness Issues` section since that section is last.
 
 ## Checklist
 

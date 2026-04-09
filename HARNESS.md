@@ -5,11 +5,11 @@ Every ticket follows a disciplined, phased workflow. Each phase is a focused ski
 ## Architecture
 
 ```
-/implement AGE-XX → harness-engine → [pickup] → [understand] → [plan] → [implement] → [quality] → [verify] → [ship] → COMPLETE
+/implement AGE-XX → harness-engine → [pickup] → [understand] → [plan] → [implement] → [quality] → [verify] → [ship] → (review: human gate) → [cleanup] → COMPLETE
 ```
 
 - `/implement` — the launcher (the skill you invoke)
-- 7 phase skills — focused work per phase
+- 8 agent phase skills + 1 human gate (`review`)
 - `harness-engine` — universal state machine that loops through phases (ships with Harnessable)
 
 ## The Harness Loop
@@ -27,7 +27,7 @@ Every ticket follows a disciplined, phased workflow. Each phase is a focused ski
 
 ### 1. Pickup
 
-Fetch the Linear ticket via MCP or parse a plain text description. Load title, description, acceptance criteria, labels, priority into the state file.
+Fetch the Linear ticket via MCP or parse a plain text description. Load title, description, acceptance criteria, labels, priority into the state file. Move the Linear ticket to **In Progress** so the team sees work has started. Initialize the conversation file with a `## Harness Issues` section.
 
 ### 2. Understand
 
@@ -59,28 +59,51 @@ Run all static and dynamic quality checks. Fix issues before proceeding.
 
 ### 6. Verify
 
-Start the app and prove the deliverable works. Use Claude in Chrome for UI verification, HTTP calls for API verification. Capture evidence (screenshots, API responses).
+Start the app on a **per-task isolated environment** and prove the deliverable works. Use Claude in Chrome for UI verification, HTTP calls for API verification. Capture evidence (screenshots, API responses).
 
-**Key commands:**
+**Per-task isolation scheme** (parallel-safe):
 
-- `docker compose up -d` — start Postgres
-- `pnpm --filter @agentfleet/db drizzle-kit migrate` — run migrations
-- `pnpm --filter @agentfleet/api dev` — API on port 9900
-- `pnpm --filter web dev` — Web on port 3000
+- Slot = last 2 digits of task ID, zero-padded (`AGE-6` → `06`, `AGE-23` → `23`)
+- API port: `99XX` (e.g. `9906`)
+- Web port: `30XX` (e.g. `3006`)
+- Postgres DB: `agentfleet_age_XX` inside the shared Postgres container
+- Per-task DB is created on verify start, dropped on verify end
+
+**Key commands** (substitute `XX` with the slot):
+
+- `docker compose up -d` — start shared Postgres (idempotent)
+- `docker compose exec -T postgres psql -U agentfleet -d postgres -c "CREATE DATABASE agentfleet_age_XX"`
+- `DATABASE_URL=postgres://agentfleet:agentfleet@localhost:5432/agentfleet_age_XX pnpm --filter @agentfleet/db drizzle-kit migrate`
+- `PORT=99XX DATABASE_URL=... WEB_URL=http://localhost:30XX pnpm --filter @agentfleet/api dev`
+- `PORT=30XX NEXT_PUBLIC_API_URL=http://localhost:99XX pnpm --filter web dev`
 - `pnpm turbo build` — production build check
+- Teardown: `kill <pids>` and `DROP DATABASE IF EXISTS agentfleet_age_XX`
 
-### 7. Ship
+### 7. Ship (pre-merge)
 
-Commit, push, and create a PR on GitHub with ticket reference, summary, and evidence from the verify phase.
+Commit (including the conversation file), push, create a PR, update Linear → `In Review`, and **watch CI to green**. Ends with the engine entering the `review` waiting gate. **Does NOT merge, healthcheck, or remove the worktree** — those are `cleanup`'s job.
 
 **Key commands:**
 
 - `git push -u origin <branch>`
 - `gh pr create`
+- `gh pr checks <pr-number> --watch` — block until CI completes
+- Linear `save_issue` with `state: "In Review"`
 
-### 8. Review (Human Gate)
+### 8. Review (human gate)
 
-Human reviews the PR, CI passes, human merges and deploys.
+Human reviews the PR on GitHub. When approved, the human tells the agent "approved, go merge it" — session recovery flips `review` to `done` and the engine resumes into `cleanup`.
+
+### 9. Cleanup (post-merge)
+
+Agent merges the approved PR, healthchecks the Railway deployment, moves Linear to `Done`, records the cleanup section to the conversation file (committed directly to master), and finally removes the worktree (with a hard safety check — never `--force`).
+
+**Key commands:**
+
+- `gh pr merge <pr-number> --squash --delete-branch`
+- `curl` against `RAILWAY_API_HEALTH_URL` and `RAILWAY_WEB_HEALTH_URL` (5-min timeout)
+- Linear `save_issue` with `state: "Done"`
+- `git worktree remove <path>` (only if `git status --porcelain` is empty)
 
 ## Profiles
 
@@ -92,23 +115,27 @@ Human reviews the PR, CI passes, human merges and deploys.
 
 ## Generated Skills
 
-| Skill                | Purpose                                               | User-invocable |
-| -------------------- | ----------------------------------------------------- | -------------- |
-| `/implement`         | Launcher — pick up ticket and start the workflow      | Yes            |
-| `harness-pickup`     | Fetch ticket context from Linear                      | No             |
-| `harness-understand` | Explore codebase and identify scope                   | No             |
-| `harness-plan`       | Create implementation plan with TDD strategy          | No             |
-| `harness-implement`  | TDD implementation — tests first                      | No             |
-| `harness-quality`    | Run typecheck, tests, lint, format                    | No             |
-| `harness-verify`     | Start app, verify deliverable with browser/API checks | No             |
-| `harness-ship`       | Commit, push, create PR                               | No             |
+| Skill                | Purpose                                                       | User-invocable |
+| -------------------- | ------------------------------------------------------------- | -------------- |
+| `/implement`         | Launcher — pick up ticket and start the workflow              | Yes            |
+| `harness-pickup`     | Fetch ticket context from Linear, move ticket to In Progress  | No             |
+| `harness-understand` | Explore codebase and identify scope                           | No             |
+| `harness-plan`       | Create implementation plan with TDD strategy                  | No             |
+| `harness-implement`  | TDD implementation — tests first                              | No             |
+| `harness-quality`    | Run typecheck, tests, lint, format                            | No             |
+| `harness-verify`     | Start app on isolated port/DB, verify deliverable             | No             |
+| `harness-ship`       | Commit, push, create PR, watch CI, set Linear In Review       | No             |
+| `harness-cleanup`    | Merge PR, Railway healthcheck, Linear → Done, remove worktree | No             |
 
 ## Core Principles
 
 1. **Verify by proof** — run the system and capture output, don't just read code
 2. **Record at phase transitions** — progress survives session drops
-3. **Fail fast** — stuck after 2 attempts? Surface it, don't spiral
-4. **Improve through evidence** — `/harness-retro` reads conversations and reshapes skills
+3. **Record friction as it happens** — every phase skill writes to `## Harness Issues` in the conversation file when something goes wrong
+4. **Fail fast** — stuck after 2 attempts? Surface it, don't spiral
+5. **Isolate at runtime** — parallel agents get their own ports + DB so they don't step on each other
+6. **Round-trip Linear** — pickup → In Progress, ship → In Review → Done
+7. **Improve through evidence** — `/harness-retro` reads conversations and reshapes skills
 
 ## Harness Data
 

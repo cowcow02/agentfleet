@@ -78,25 +78,39 @@ Typical size: 30min – 2hrs
 - Constraints: must verify by proof — run the system and capture output, don't just read code
 - Gate: deliverable proven working + build succeeds
 
-### 7. Ship (PR Creation)
+### 7. Ship (PR Creation, pre-merge)
 
 - Owner: agent
 - Trigger: local verification passes
-- Artifact: GitHub pull request
-- Verification: PR created with proper title, description referencing ticket, passing CI
+- Artifact: GitHub pull request with green CI
+- Verification: PR created with proper title, description referencing ticket, `gh pr checks --watch` returns success
 - Destination: GitHub
-- Constraints: branch naming convention (e.g., `age-XX-short-description`), PR description includes ticket link and summary of changes
-- Gate: PR URL captured in state
+- Constraints: branch naming convention (e.g., `age-XX-short-description`), PR description includes ticket link and summary of changes; conversation file `.harness/conversations/<task-id>.md` MUST be staged in the initial commit; ship-phase conversation update committed in a follow-up commit
+- Gate: PR URL + PR number captured in state, CI green, Linear → "In Review"
 
 ### 8. Review
 
 - Owner: human
-- Trigger: PR created
-- Artifact: approval or change requests
-- Verification: human reviews code, CI passes
+- Trigger: ship complete
+- Artifact: approval ("approved, go merge it") or change requests
+- Verification: human reviews code on GitHub
 - Destination: GitHub PR
-- Constraints: human decides merge/deploy
-- Gate: human approves and merges
+- Constraints: human decides whether to approve; agent does NOT merge until human says so
+- Gate: review phase status flipped from `waiting` → `done` by human signal
+
+### 9. Cleanup (post-merge)
+
+- Owner: agent
+- Trigger: review phase done
+- Artifact: merged PR + verified production deploy + clean local state
+- Verification:
+  - `gh pr merge --squash --delete-branch` succeeds
+  - Railway API + Web healthchecks return 200 within 5-min timeout
+  - Linear ticket moved to `Done`
+  - Conversation file `## Cleanup` section committed to master
+  - Worktree removed (`git worktree remove`, NEVER `--force`)
+- Constraints: hard safety check before worktree removal — `git status --porcelain` must be empty
+- Gate: workflow complete
 
 ## Agent-owned phases (become phase skills)
 
@@ -107,11 +121,12 @@ Typical size: 30min – 2hrs
 - quality
 - verify
 - ship
+- cleanup
 
 ## Human-owned gates (become status: "waiting")
 
 - plan review (full profile only)
-- PR review (always)
+- PR review / merge approval (always — between ship and cleanup)
 
 ## Automated steps (become checklist items)
 
@@ -119,9 +134,9 @@ Typical size: 30min – 2hrs
 
 ## Profiles
 
-- `full`: pickup → understand → plan (human gate) → implement → quality → verify → ship → review (human gate)
-- `standard`: pickup → understand → plan (auto) → implement → quality → verify → ship → review (human gate)
-- `quick`: pickup → implement → quality → verify → ship → review (human gate)
+- `full`: pickup → understand → plan (human gate) → implement → quality → verify → ship → review (human gate) → cleanup
+- `standard`: pickup → understand → plan (auto) → implement → quality → verify → ship → review (human gate) → cleanup
+- `quick`: pickup → implement → quality → verify → ship → review (human gate) → cleanup
 
 ## Friction-to-concept matches
 

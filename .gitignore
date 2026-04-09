@@ -4,3 +4,5 @@ node_modules/
 /tmp/
 node_modules/
 cli/node_modules/
+.harness/state.json
+.worktrees

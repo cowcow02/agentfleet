@@ -17,6 +17,7 @@ import { sseRouter } from "./routes/sse";
 import { apiKeysRouter } from "./routes/api-keys";
 import { meRouter } from "./routes/me";
 import { projectsRouter } from "./routes/projects";
+import { telemetryRouter } from "./routes/telemetry";
 import { createWsHandler } from "./ws/handler";
 
 const app = new Hono();
@@ -29,6 +30,9 @@ app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 
 // Health check — before auth middleware
 app.route("", healthRouter);
+
+// OTLP telemetry — before auth middleware (uses API key auth internally)
+app.route("", telemetryRouter);
 
 // Auth middleware for all /api/* routes (skips auth/**, webhooks/**)
 app.use("/api/*", authMiddleware);

@@ -1,6 +1,6 @@
 {
-  "id": "41c8efaa-e61c-4215-aef3-9251992ac861",
-  "prevId": "61b99161-ef89-4380-a8ba-36fdffa37523",
+  "id": "2c3435e2-61bf-45e6-b3bc-0aa12dc993e9",
+  "prevId": "41c8efaa-e61c-4215-aef3-9251992ac861",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -818,6 +818,119 @@
         "telemetry_spans_dispatch_id_dispatches_id_fk": {
           "name": "telemetry_spans_dispatch_id_dispatches_id_fk",
           "tableFrom": "telemetry_spans",
+          "tableTo": "dispatches",
+          "columnsFrom": [
+            "dispatch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.transcript_events": {
+      "name": "transcript_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "dispatch_id": {
+          "name": "dispatch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_transcript_dispatch": {
+          "name": "idx_transcript_dispatch",
+          "columns": [
+            {
+              "expression": "dispatch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_transcript_org_dispatch": {
+          "name": "idx_transcript_org_dispatch",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "dispatch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "transcript_events_dispatch_id_dispatches_id_fk": {
+          "name": "transcript_events_dispatch_id_dispatches_id_fk",
+          "tableFrom": "transcript_events",
           "tableTo": "dispatches",
           "columnsFrom": [
             "dispatch_id"

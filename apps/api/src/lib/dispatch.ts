@@ -202,6 +202,7 @@ export function serializeDispatch(row: typeof dispatches.$inferSelect): Record<s
     exitCode: row.exitCode,
     durationMs: row.durationMs,
     messages: row.messages ?? [],
+    usage: row.usage ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

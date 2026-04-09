@@ -10,7 +10,9 @@ Implement the change using TDD: write failing tests, then write code to make the
 
 ## Steps
 
-1. **Read the plan** from state outputs
+1. **Read the plan** from state outputs.
+   - **Standard / full profile:** `state.outputs.plan` exists (written by `harness-plan`). Use it.
+   - **Quick profile:** `harness-plan` is skipped, so `state.outputs.plan` is missing. Fall back to `state.outputs.pickup` (ticket title, description, requirements) and infer the work directly. Quick profile is meant for trivial changes (typos, small fixes) where a formal plan would be overkill — keep the implementation surface tight and skip TDD ceremony if the change is a one-liner.
 
 2. **If schema changes needed:**
    - Update Drizzle schema in `packages/db/src/schema.ts`
@@ -33,13 +35,16 @@ Implement the change using TDD: write failing tests, then write code to make the
    - DB queries: use Drizzle query builder, import `db` from `@agentfleet/db`
 
 5. **Record to conversation file:**
-   - Append to `.harness/conversations/<task-id>.md`:
+   - **Insert before** the `## Harness Issues` marker in `.harness/conversations/<task-id>.md` (use Edit tool with `## Harness Issues` as the anchor — do NOT literally append, that would land below the issues section):
+
      ```
      ## Implement
      **Tests written:** <count>
      **Files changed:** <list>
      **Key decisions:** <any deviations from plan>
      ```
+
+   - **If you hit friction** while implementing (failed test approach, unclear pattern, retried more than once, plan revision), append an entry to the **literal end** of the file — it will land inside the `## Harness Issues` section since that section is last.
 
 ## Checklist
 
