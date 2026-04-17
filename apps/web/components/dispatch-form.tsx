@@ -2,17 +2,41 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { createDispatch, fetchLinearIssues } from "@/lib/api";
-import type { LinearIssue } from "@agentfleet/types";
+import { createDispatch, fetchLinearIssues, fetchProjects } from "@/lib/api";
+import type { LinearIssue, Project } from "@agentfleet/types";
 
 export function DispatchForm() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [linearIssues, setLinearIssues] = useState<LinearIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Load projects once; pick the first one with Linear configured as default
   useEffect(() => {
-    fetchLinearIssues()
+    fetchProjects()
+      .then((result) => {
+        setProjects(result.projects);
+        if (result.projects.length === 0) {
+          setLoading(false);
+          return;
+        }
+        const firstLinear = result.projects.find((p) => p.trackerType === "linear");
+        setSelectedProjectId((prev) => prev ?? firstLinear?.id ?? result.projects[0].id);
+      })
+      .catch(() => {
+        setProjects([]);
+        setLoading(false);
+      });
+  }, []);
+
+  // Load issues whenever selected project changes
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    setLoading(true);
+    setError(null);
+    fetchLinearIssues(selectedProjectId)
       .then((result) => {
         setLinearIssues(result.issues);
       })
@@ -22,7 +46,7 @@ export function DispatchForm() {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [selectedProjectId]);
 
   async function handleDispatch(issue: LinearIssue) {
     setSubmitting(true);

@@ -1,12 +1,15 @@
 import type {
   CreateDispatchRequest,
   CreateDispatchResponse,
+  CreateProjectRequest,
   ListDispatchesResponse,
   DashboardStatsResponse,
   ListAgentsResponse,
   LinearConfigResponse,
+  Project,
   UpdateLinearConfigRequest,
   ListLinearIssuesResponse,
+  ListProjectsResponse,
   ListWebhookLogsResponse,
   Dispatch,
 } from "@agentfleet/types";
@@ -91,27 +94,43 @@ export function fetchAgents(): Promise<ListAgentsResponse> {
   return request<ListAgentsResponse>("/api/agents");
 }
 
-// --- Linear Integration ---
+// --- Projects ---
 
-export function fetchLinearConfig(): Promise<LinearConfigResponse> {
-  return request<LinearConfigResponse>("/api/integrations/linear");
+export function fetchProjects(): Promise<ListProjectsResponse> {
+  return request<ListProjectsResponse>("/api/projects");
 }
 
-export function updateLinearConfig(data: UpdateLinearConfigRequest): Promise<LinearConfigResponse> {
-  return request<LinearConfigResponse>("/api/integrations/linear", {
+export function createProject(data: CreateProjectRequest): Promise<Project> {
+  return request<Project>("/api/projects", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// --- Linear Integration (project-scoped) ---
+
+export function fetchLinearConfig(projectId: string): Promise<LinearConfigResponse> {
+  return request<LinearConfigResponse>(`/api/projects/${projectId}/integrations/linear`);
+}
+
+export function updateLinearConfig(
+  projectId: string,
+  data: UpdateLinearConfigRequest,
+): Promise<LinearConfigResponse> {
+  return request<LinearConfigResponse>(`/api/projects/${projectId}/integrations/linear`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
 }
 
-export function deleteLinearConfig(): Promise<void> {
-  return request<void>("/api/integrations/linear", {
+export function deleteLinearConfig(projectId: string): Promise<void> {
+  return request<void>(`/api/projects/${projectId}/integrations/linear`, {
     method: "DELETE",
   });
 }
 
-export function fetchLinearIssues(): Promise<ListLinearIssuesResponse> {
-  return request<ListLinearIssuesResponse>("/api/integrations/linear/issues");
+export function fetchLinearIssues(projectId: string): Promise<ListLinearIssuesResponse> {
+  return request<ListLinearIssuesResponse>(`/api/projects/${projectId}/integrations/linear/issues`);
 }
 
 // --- Webhook Logs ---

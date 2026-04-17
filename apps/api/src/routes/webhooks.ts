@@ -1,40 +1,44 @@
 import { Hono } from "hono";
-import { db, integrations, webhookLogs } from "@agentfleet/db";
-import { eq, and } from "drizzle-orm";
+import { db, projects, webhookLogs } from "@agentfleet/db";
+import { eq } from "drizzle-orm";
 import { createDispatch } from "../lib/dispatch";
+import type { LinearConfig } from "@agentfleet/types";
 
 export const webhooksRouter = new Hono();
 
 /**
- * POST /api/webhooks/linear/:orgId — Receive Linear webhook events.
+ * POST /api/webhooks/linear/:projectId — Receive Linear webhook events.
  * Unauthenticated — excluded from auth middleware by path prefix.
  * Always returns 200 to acknowledge the webhook.
  */
-webhooksRouter.post("/api/webhooks/linear/:orgId", async (c) => {
-  const orgId = c.req.param("orgId");
+webhooksRouter.post("/api/webhooks/linear/:projectId", async (c) => {
+  const projectId = c.req.param("projectId");
 
   const body = await c.req.json().catch(() => null);
   if (!body) {
     return c.json({ ok: true });
   }
 
-  // Load integration config
-  const [integration] = await db
-    .select()
-    .from(integrations)
-    .where(and(eq(integrations.organizationId, orgId), eq(integrations.type, "linear")))
-    .limit(1);
+  // Load project + its tracker config
+  const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
 
-  if (!integration) {
-    await logWebhook(orgId, "rejected", "No Linear integration configured", body);
+  if (!project) {
+    await logWebhook("unknown", "rejected", `Project ${projectId} not found`, body);
     return c.json({ ok: true });
   }
 
-  const config = integration.config as {
-    apiKey: string;
-    triggerStatus: string;
-    triggerLabels: string[];
-  };
+  if (project.trackerType !== "linear" || !project.trackerConfig) {
+    await logWebhook(
+      project.organizationId,
+      "rejected",
+      "No Linear integration configured for project",
+      body,
+    );
+    return c.json({ ok: true });
+  }
+
+  const orgId = project.organizationId;
+  const config = project.trackerConfig as LinearConfig;
 
   // Only process Issue events
   if (body.type !== "Issue") {

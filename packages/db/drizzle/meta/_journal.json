@@ -36,6 +36,13 @@
       "when": 1775720140404,
       "tag": "0004_pink_proudstar",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775726859574,
+      "tag": "0005_mean_cammi",
+      "breakpoints": true
     }
   ]
 }

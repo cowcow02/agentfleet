@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { organization, apiKey, useSession } from "@/lib/auth-client";
 import { LinearConfig } from "@/components/linear-config";
+import { createProject, fetchProjects } from "@/lib/api";
+import type { Project } from "@agentfleet/types";
 import { Copy, Trash2, UserPlus, Plus } from "lucide-react";
 
 interface Member {
@@ -32,11 +34,47 @@ export default function SettingsPage() {
   const [creatingKey, setCreatingKey] = useState(false);
   const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
 
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [creatingProject, setCreatingProject] = useState(false);
+
   useEffect(() => {
     loadMembers();
     loadApiKeys();
     loadOrgName();
+    loadProjects();
   }, []);
+
+  async function loadProjects() {
+    try {
+      const result = await fetchProjects();
+      setProjects(result.projects);
+      if (result.projects.length > 0) {
+        setSelectedProjectId((prev) => prev ?? result.projects[0].id);
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  async function handleCreateProject(e: React.FormEvent) {
+    e.preventDefault();
+    const name = newProjectName.trim();
+    if (!name) return;
+    setCreatingProject(true);
+    try {
+      const project = await createProject({ name });
+      setProjects((prev) => [...prev, project]);
+      setSelectedProjectId(project.id);
+      setNewProjectName("");
+      toast.success(`Project "${project.name}" created`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create project");
+    } finally {
+      setCreatingProject(false);
+    }
+  }
 
   async function loadOrgName() {
     try {
@@ -450,8 +488,64 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Linear Integration */}
-      <LinearConfig />
+      {/* Projects */}
+      <div className="af-section" style={{ marginBottom: 24 }}>
+        <div className="af-section-header">Projects</div>
+        <div className="af-section-body">
+          {projects.length > 0 && (
+            <div className="flex flex-col" style={{ gap: 6, marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                Configure tracker for
+              </label>
+              <select
+                value={selectedProjectId ?? ""}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {projects.length === 0 && (
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--af-text-secondary)",
+                marginBottom: 16,
+              }}
+            >
+              No projects yet. Create one below to configure a tracker integration.
+            </p>
+          )}
+          <form onSubmit={handleCreateProject} className="flex items-end" style={{ gap: 12 }}>
+            <div className="flex flex-col flex-1" style={{ gap: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
+                New project name
+              </label>
+              <input
+                placeholder="My Team"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={creatingProject || !newProjectName.trim()}
+              className="af-btn-primary"
+            >
+              <Plus className="h-3.5 w-3.5 inline mr-1" />
+              {creatingProject ? "Creating..." : "Create"}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Linear Integration — per selected project */}
+      {selectedProjectId && <LinearConfig projectId={selectedProjectId} />}
     </div>
   );
 }

@@ -104,21 +104,6 @@ export const transcriptEvents = pgTable(
   ],
 );
 
-// --- integrations ---
-
-export const integrations = pgTable(
-  "integrations",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    organizationId: text("organization_id").notNull(),
-    type: text("type", { enum: ["linear"] }).notNull(),
-    config: jsonb("config").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [uniqueIndex("idx_integrations_org_type").on(table.organizationId, table.type)],
-);
-
 // --- api_keys ---
 
 export const apiKeys = pgTable(

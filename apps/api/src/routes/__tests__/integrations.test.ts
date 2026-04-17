@@ -2,15 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock DB
 const mockDbSelect = vi.fn();
-const mockDbInsert = vi.fn();
 const mockDbUpdate = vi.fn();
-const mockDbDelete = vi.fn();
 
 vi.mock("@agentfleet/db", () => {
-  const integrations = {
+  const projects = {
     id: "id",
     organizationId: "organization_id",
-    type: "type",
+    trackerType: "tracker_type",
+    trackerConfig: "tracker_config",
   };
   return {
     db: {
@@ -21,19 +20,13 @@ vi.mock("@agentfleet/db", () => {
           }),
         }),
       }),
-      insert: () => ({
-        values: (v: any) => mockDbInsert(v),
-      }),
       update: () => ({
         set: (s: any) => ({
           where: (w: any) => mockDbUpdate(s, w),
         }),
       }),
-      delete: () => ({
-        where: (w: any) => mockDbDelete(w),
-      }),
     },
-    integrations,
+    projects,
     eq: vi.fn((a: any, b: any) => ({ _eq: [a, b] })),
     and: vi.fn((...args: any[]) => ({ _and: args })),
   };
@@ -42,70 +35,92 @@ vi.mock("@agentfleet/db", () => {
 import { createTestApp, createUnauthenticatedApp } from "./_helpers";
 import { integrationsRouter } from "../integrations";
 
+const PROJECT_ID = "proj-1";
+
+function linearProject(overrides: Record<string, unknown> = {}) {
+  return {
+    id: PROJECT_ID,
+    organizationId: "org-test",
+    name: "My Project",
+    slug: "my-project",
+    trackerType: "linear",
+    trackerConfig: {
+      apiKey: "lin_secret_123",
+      triggerStatus: "In Progress",
+      triggerLabels: ["bug"],
+    },
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
 describe("integrations routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("GET /api/integrations/linear", () => {
-    it("returns configured:false when no integration exists", async () => {
-      mockDbSelect.mockResolvedValue([]);
+  describe("GET /api/projects/:projectId/integrations/linear", () => {
+    it("returns configured:false when project has no tracker config", async () => {
+      mockDbSelect.mockResolvedValue([linearProject({ trackerType: null, trackerConfig: null })]);
 
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`);
       expect(res.status).toBe(200);
 
       const body = await res.json();
       expect(body.configured).toBe(false);
     });
 
-    it("returns config with masked data when integration exists", async () => {
-      mockDbSelect.mockResolvedValue([
-        {
-          id: "int-1",
-          organizationId: "org-test",
-          type: "linear",
-          config: {
-            apiKey: "lin_secret_123",
-            triggerStatus: "In Progress",
-            triggerLabels: ["bug"],
-          },
-        },
-      ]);
+    it("returns config with webhook URL when project has linear config", async () => {
+      mockDbSelect.mockResolvedValue([linearProject()]);
 
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`);
       expect(res.status).toBe(200);
 
       const body = await res.json();
       expect(body.configured).toBe(true);
       expect(body.triggerStatus).toBe("In Progress");
       expect(body.triggerLabels).toEqual(["bug"]);
-      expect(body.webhookUrl).toContain("/api/webhooks/linear/org-test");
+      expect(body.webhookUrl).toContain(`/api/webhooks/linear/${PROJECT_ID}`);
+    });
+
+    it("returns 404 when project not found", async () => {
+      mockDbSelect.mockResolvedValue([]);
+
+      const app = createTestApp("org-test");
+      app.route("/", integrationsRouter);
+
+      const res = await app.request(`/api/projects/nonexistent/integrations/linear`);
+      expect(res.status).toBe(404);
+
+      const body = await res.json();
+      expect(body.error).toBe("Project not found");
     });
 
     it("returns 400 when no organizationId", async () => {
       const app = createUnauthenticatedApp();
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`);
       expect(res.status).toBe(400);
     });
   });
 
-  describe("PUT /api/integrations/linear", () => {
-    it("creates new integration when none exists", async () => {
-      mockDbSelect.mockResolvedValue([]); // no existing
-      mockDbInsert.mockResolvedValue(undefined);
+  describe("PUT /api/projects/:projectId/integrations/linear", () => {
+    it("writes linear config to project.trackerConfig", async () => {
+      mockDbSelect.mockResolvedValue([linearProject({ trackerType: null, trackerConfig: null })]);
+      mockDbUpdate.mockResolvedValue(undefined);
 
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear", {
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -119,17 +134,25 @@ describe("integrations routes", () => {
       const body = await res.json();
       expect(body.configured).toBe(true);
       expect(body.triggerStatus).toBe("In Progress");
-      expect(mockDbInsert).toHaveBeenCalled();
+      expect(mockDbUpdate).toHaveBeenCalled();
+
+      const [setArg] = mockDbUpdate.mock.calls[0];
+      expect(setArg.trackerType).toBe("linear");
+      expect(setArg.trackerConfig).toEqual({
+        apiKey: "lin_api_key",
+        triggerStatus: "In Progress",
+        triggerLabels: ["bug"],
+      });
     });
 
-    it("updates existing integration", async () => {
-      mockDbSelect.mockResolvedValue([{ id: "int-1" }]); // existing
+    it("updates existing project config", async () => {
+      mockDbSelect.mockResolvedValue([linearProject()]);
       mockDbUpdate.mockResolvedValue(undefined);
 
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear", {
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -142,11 +165,29 @@ describe("integrations routes", () => {
       expect(mockDbUpdate).toHaveBeenCalled();
     });
 
+    it("returns 404 when project not found", async () => {
+      mockDbSelect.mockResolvedValue([]);
+
+      const app = createTestApp("org-test");
+      app.route("/", integrationsRouter);
+
+      const res = await app.request(`/api/projects/nonexistent/integrations/linear`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: "lin_api_key",
+          triggerStatus: "In Progress",
+          triggerLabels: [],
+        }),
+      });
+      expect(res.status).toBe(404);
+    });
+
     it("returns 422 for invalid input", async () => {
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear", {
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: "", triggerStatus: "" }),
@@ -154,11 +195,11 @@ describe("integrations routes", () => {
       expect(res.status).toBe(422);
     });
 
-    it("returns 400 when no organizationId on PUT", async () => {
+    it("returns 400 when no organizationId", async () => {
       const app = createUnauthenticatedApp();
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear", {
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -174,7 +215,7 @@ describe("integrations routes", () => {
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear", {
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`, {
         method: "PUT",
         headers: { "Content-Type": "text/plain" },
         body: "not json",
@@ -183,38 +224,68 @@ describe("integrations routes", () => {
     });
   });
 
-  describe("DELETE /api/integrations/linear", () => {
-    it("removes integration and returns configured:false", async () => {
-      mockDbDelete.mockResolvedValue(undefined);
+  describe("DELETE /api/projects/:projectId/integrations/linear", () => {
+    it("clears tracker config and returns configured:false", async () => {
+      mockDbSelect.mockResolvedValue([linearProject()]);
+      mockDbUpdate.mockResolvedValue(undefined);
 
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear", { method: "DELETE" });
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`, {
+        method: "DELETE",
+      });
       expect(res.status).toBe(200);
 
       const body = await res.json();
       expect(body.configured).toBe(false);
-      expect(mockDbDelete).toHaveBeenCalled();
+      expect(mockDbUpdate).toHaveBeenCalled();
+      const [setArg] = mockDbUpdate.mock.calls[0];
+      expect(setArg.trackerType).toBeNull();
+      expect(setArg.trackerConfig).toBeNull();
+    });
+
+    it("returns 404 when project not found", async () => {
+      mockDbSelect.mockResolvedValue([]);
+
+      const app = createTestApp("org-test");
+      app.route("/", integrationsRouter);
+
+      const res = await app.request(`/api/projects/nonexistent/integrations/linear`, {
+        method: "DELETE",
+      });
+      expect(res.status).toBe(404);
     });
 
     it("returns 400 when no organizationId", async () => {
       const app = createUnauthenticatedApp();
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear", { method: "DELETE" });
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear`, {
+        method: "DELETE",
+      });
       expect(res.status).toBe(400);
     });
   });
 
-  describe("GET /api/integrations/linear/issues", () => {
-    it("returns 404 when no integration configured", async () => {
+  describe("GET /api/projects/:projectId/integrations/linear/issues", () => {
+    it("returns 404 when project not found", async () => {
       mockDbSelect.mockResolvedValue([]);
 
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear/issues");
+      const res = await app.request(`/api/projects/nonexistent/integrations/linear/issues`);
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 404 when project has no linear config", async () => {
+      mockDbSelect.mockResolvedValue([linearProject({ trackerType: null, trackerConfig: null })]);
+
+      const app = createTestApp("org-test");
+      app.route("/", integrationsRouter);
+
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear/issues`);
       expect(res.status).toBe(404);
 
       const body = await res.json();
@@ -225,17 +296,12 @@ describe("integrations routes", () => {
       const app = createUnauthenticatedApp();
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear/issues");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear/issues`);
       expect(res.status).toBe(400);
     });
 
     it("fetches and transforms issues from Linear API", async () => {
-      mockDbSelect.mockResolvedValue([
-        {
-          id: "int-1",
-          config: { apiKey: "lin_key_123" },
-        },
-      ]);
+      mockDbSelect.mockResolvedValue([linearProject()]);
 
       const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
         new Response(
@@ -263,7 +329,7 @@ describe("integrations routes", () => {
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear/issues");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear/issues`);
       expect(res.status).toBe(200);
 
       const body = await res.json();
@@ -276,19 +342,14 @@ describe("integrations routes", () => {
     });
 
     it("returns 502 when Linear API call fails", async () => {
-      mockDbSelect.mockResolvedValue([
-        {
-          id: "int-1",
-          config: { apiKey: "lin_key_123" },
-        },
-      ]);
+      mockDbSelect.mockResolvedValue([linearProject()]);
 
       const mockFetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
 
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear/issues");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear/issues`);
       expect(res.status).toBe(502);
 
       const body = await res.json();
@@ -298,12 +359,7 @@ describe("integrations routes", () => {
     });
 
     it("handles empty issues response", async () => {
-      mockDbSelect.mockResolvedValue([
-        {
-          id: "int-1",
-          config: { apiKey: "lin_key_123" },
-        },
-      ]);
+      mockDbSelect.mockResolvedValue([linearProject()]);
 
       const mockFetch = vi
         .spyOn(globalThis, "fetch")
@@ -312,7 +368,7 @@ describe("integrations routes", () => {
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear/issues");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear/issues`);
       expect(res.status).toBe(200);
 
       const body = await res.json();
@@ -322,12 +378,7 @@ describe("integrations routes", () => {
     });
 
     it("handles missing data.issues in Linear API response", async () => {
-      mockDbSelect.mockResolvedValue([
-        {
-          id: "int-1",
-          config: { apiKey: "lin_key_123" },
-        },
-      ]);
+      mockDbSelect.mockResolvedValue([linearProject()]);
 
       const mockFetch = vi
         .spyOn(globalThis, "fetch")
@@ -336,7 +387,7 @@ describe("integrations routes", () => {
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear/issues");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear/issues`);
       expect(res.status).toBe(200);
 
       const body = await res.json();
@@ -346,12 +397,7 @@ describe("integrations routes", () => {
     });
 
     it("handles completely missing data field in Linear API response", async () => {
-      mockDbSelect.mockResolvedValue([
-        {
-          id: "int-1",
-          config: { apiKey: "lin_key_123" },
-        },
-      ]);
+      mockDbSelect.mockResolvedValue([linearProject()]);
 
       const mockFetch = vi
         .spyOn(globalThis, "fetch")
@@ -360,7 +406,7 @@ describe("integrations routes", () => {
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear/issues");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear/issues`);
       expect(res.status).toBe(200);
 
       const body = await res.json();
@@ -369,21 +415,8 @@ describe("integrations routes", () => {
       mockFetch.mockRestore();
     });
 
-    it("returns 400 when no organizationId on GET issues", async () => {
-      const app = createUnauthenticatedApp();
-      app.route("/", integrationsRouter);
-
-      const res = await app.request("/api/integrations/linear/issues");
-      expect(res.status).toBe(400);
-    });
-
     it("handles null assignee", async () => {
-      mockDbSelect.mockResolvedValue([
-        {
-          id: "int-1",
-          config: { apiKey: "lin_key_123" },
-        },
-      ]);
+      mockDbSelect.mockResolvedValue([linearProject()]);
 
       const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
         new Response(
@@ -411,7 +444,7 @@ describe("integrations routes", () => {
       const app = createTestApp("org-test");
       app.route("/", integrationsRouter);
 
-      const res = await app.request("/api/integrations/linear/issues");
+      const res = await app.request(`/api/projects/${PROJECT_ID}/integrations/linear/issues`);
       const body = await res.json();
 
       expect(body.issues[0].assignee).toBeNull();

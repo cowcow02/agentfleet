@@ -5,6 +5,7 @@
 **Scope:** Full-stack feature spanning daemon (JSONL tailing), types (telemetry schema), API (WS handler + DB storage + SSE), touching 4 packages.
 
 **Files to modify:**
+
 - `apps/daemon/index.js` — add JSONL file tailing (fs.watch + readline), send telemetry messages
 - `packages/types/src/ws.ts` — add `TelemetryMessage` to `DaemonMessage` union
 - `packages/types/src/__tests__/ws.test.ts` — tests for new message type
@@ -17,6 +18,7 @@
 - `apps/api/src/routes/sse.ts` — stream `telemetry:event` to clients
 
 **Files to create:**
+
 - `apps/daemon/lib/jsonl-tailer.js` — extracted JSONL tailing module
 - `apps/daemon/lib/telemetry-parser.js` — extract/parse JSONL entries into telemetry events
 
@@ -28,12 +30,14 @@
 **Schema changes:** Yes — new `telemetryEvents` table with Drizzle migration
 
 ### Steps
+
 1. Types + DB: `TelemetryMessage` schema in ws.ts, `telemetryEvents` table in schema.ts
 2. API: `emitTelemetryEvent` in events.ts, `appendTelemetryEvent` in dispatch.ts, telemetry case in handler.ts, SSE listener in sse.ts
 3. Daemon: `telemetry-parser.js` (parse JSONL → telemetry events), `jsonl-tailer.js` (fs.watch + readline tailing)
 4. Session ID: generate UUID per dispatch, pass `--session-id`, compute transcript path
 
 **Key patterns to follow:**
+
 - WS messages: Zod discriminated union in `packages/types/src/ws.ts`
 - Handler: switch on `msg.type` in `handleConnection()`, call lib functions
 - DB: Drizzle pgTable with orgId, dispatch reference, timestamps
@@ -44,6 +48,7 @@
 ## Implement
 
 **Tests written:** 30 new tests across packages
+
 - types/ws.test.ts: 9 new (TelemetryMessage validation + DaemonMessage union)
 - api/events.test.ts: 1 new (emitTelemetryEvent)
 - api/dispatch.test.ts: 2 new (appendTelemetryEvent)
@@ -52,11 +57,13 @@
 - daemon/jsonl-tailer.test.js: 6 new (Node test runner)
 
 **Files changed:** 14
+
 - Modified: ws.ts, schema.ts, events.ts, dispatch.ts, handler.ts, sse.ts, daemon/index.js, daemon/package.json + 4 test files
 - Created: telemetry-parser.js, jsonl-tailer.js + 2 daemon test files
-- Generated: drizzle/0003_*.sql migration
+- Generated: drizzle/0003\_\*.sql migration
 
 **Key decisions:**
+
 - Used Node's built-in `node:test` for daemon tests (no jest/vitest dep needed for plain JS)
 - `findTranscriptFile()` searches all `.claude/projects/*` dirs for the session ID rather than computing project hash (more robust)
 - JsonlTailer uses fs.statSync offset tracking — only emits new lines, ignores pre-existing content
@@ -64,6 +71,7 @@
 - Telemetry parser extracts `tool_call`, `tool_result`, `assistant` (text), `usage`, `attachment` event types from JSONL entries
 
 **Test results:**
+
 - types: 172 passing
 - api: 173 passing
 - web: 118 passing

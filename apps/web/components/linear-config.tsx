@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import {
-  fetchLinearConfig,
-  updateLinearConfig,
-  deleteLinearConfig,
-} from "@/lib/api";
+import { fetchLinearConfig, updateLinearConfig, deleteLinearConfig } from "@/lib/api";
 import { Copy } from "lucide-react";
 import type { LinearConfigResponse } from "@agentfleet/types";
 
-export function LinearConfig() {
+interface LinearConfigProps {
+  projectId: string;
+}
+
+export function LinearConfig({ projectId }: LinearConfigProps) {
   const [config, setConfig] = useState<LinearConfigResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -21,7 +21,12 @@ export function LinearConfig() {
   const [saveMsg, setSaveMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
-    fetchLinearConfig()
+    setLoading(true);
+    setConfig(null);
+    setApiKeyVal("");
+    setTriggerStatus("");
+    setTriggerLabels("");
+    fetchLinearConfig(projectId)
       .then((c) => {
         setConfig(c);
         if (c.configured) {
@@ -31,7 +36,7 @@ export function LinearConfig() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [projectId]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -43,7 +48,7 @@ export function LinearConfig() {
         .map((l) => l.trim())
         .filter(Boolean);
 
-      const result = await updateLinearConfig({
+      const result = await updateLinearConfig(projectId, {
         apiKey: apiKeyVal,
         triggerStatus,
         triggerLabels: labels,
@@ -62,16 +67,14 @@ export function LinearConfig() {
   async function handleDelete() {
     if (!confirm("Remove Linear integration? This cannot be undone.")) return;
     try {
-      await deleteLinearConfig();
+      await deleteLinearConfig(projectId);
       setConfig({ configured: false });
       setApiKeyVal("");
       setTriggerStatus("");
       setTriggerLabels("");
       toast.success("Linear integration removed");
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to remove config",
-      );
+      toast.error(err instanceof Error ? err.message : "Failed to remove config");
     }
   }
 
@@ -84,7 +87,9 @@ export function LinearConfig() {
       <div className="af-section">
         <div className="af-section-header">Linear Integration</div>
         <div className="af-section-body">
-          <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>Loading Linear config...</p>
+          <p style={{ fontSize: 13, color: "var(--af-text-secondary)" }}>
+            Loading Linear config...
+          </p>
         </div>
       </div>
     );
@@ -124,7 +129,11 @@ export function LinearConfig() {
                 </label>
                 <input
                   type="password"
-                  placeholder={config?.configured ? "lin_api_\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (saved)" : "lin_api_xxxxxxxx"}
+                  placeholder={
+                    config?.configured
+                      ? "lin_api_\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (saved)"
+                      : "lin_api_xxxxxxxx"
+                  }
                   value={apiKeyVal}
                   onChange={(e) => setApiKeyVal(e.target.value)}
                   required={!config?.configured}
@@ -134,10 +143,7 @@ export function LinearConfig() {
                 <label style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)" }}>
                   Trigger when status changes to
                 </label>
-                <select
-                  value={triggerStatus}
-                  onChange={(e) => setTriggerStatus(e.target.value)}
-                >
+                <select value={triggerStatus} onChange={(e) => setTriggerStatus(e.target.value)}>
                   <option value="backlog">Backlog</option>
                   <option value="todo">Todo</option>
                   <option value="in_progress">In Progress</option>
@@ -161,7 +167,14 @@ export function LinearConfig() {
             {/* Webhook URL */}
             {config?.configured && config.webhookUrl && (
               <div>
-                <div style={{ fontSize: 12, fontWeight: 500, color: "var(--af-text-secondary)", marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: "var(--af-text-secondary)",
+                    marginBottom: 8,
+                  }}
+                >
                   Webhook URL (configure in Linear):
                 </div>
                 <div className="af-mono-box">
@@ -189,11 +202,7 @@ export function LinearConfig() {
 
             {/* Actions */}
             <div className="flex items-center" style={{ marginTop: 2 }}>
-              <button
-                type="submit"
-                disabled={saving}
-                className="af-btn-primary"
-              >
+              <button type="submit" disabled={saving} className="af-btn-primary">
                 {saving ? "Saving..." : "Save Configuration"}
               </button>
               {config?.configured && (

@@ -65,16 +65,6 @@ export const LinearConfigSchema = z.object({
 });
 export type LinearConfig = z.infer<typeof LinearConfigSchema>;
 
-export const IntegrationSchema = z.object({
-  id: z.string().uuid(),
-  organizationId: z.string(),
-  type: IntegrationTypeEnum,
-  config: z.unknown(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-export type Integration = z.infer<typeof IntegrationSchema>;
-
 export const WebhookLogEntrySchema = z.object({
   id: z.number(),
   organizationId: z.string(),
